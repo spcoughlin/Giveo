@@ -87,14 +87,22 @@ class UserTagTable:
     def ignore(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             self.set(tag, self.getVal(tag) * .9)
+            if self.getVal(tag) < .05:
+                self.set(tag, 0)
         for tag in nonprofit.tags["secondary"]:
             self.set(tag, self.getVal(tag) * .99)
+            if self.getVal(tag) < .05:
+                self.set(tag, 0)
 
     def dislike(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             self.set(tag, self.getVal(tag) * .75)
+            if self.getVal(tag) < .05:
+                self.set(tag, 0)
         for tag in nonprofit.tags["secondary"]:
             self.set(tag, self.getVal(tag) * .975)
+            if self.getVal(tag) < .05:
+                self.set(tag, 0)
 
 
 class NonProfit:
@@ -162,14 +170,15 @@ class User:
     def like(self, nonprofit):
         self.tags.like(nonprofit)
 
-    def donate(self, nonprofit, amount=0.0):
+    def donate(self, nonprofit, amount):
         self.tags.donate(nonprofit)
-
-    def dislike(self, nonprofit):
-        self.tags.dislike(nonprofit)
+        self.donations.append(nonprofit)
 
     def ignore(self, nonprofit):
         self.tags.ignore(nonprofit)
+
+    def dislike(self, nonprofit):
+        self.tags.dislike(nonprofit)
 
 
 def compute_content_vector(content: dict, total_tags=100):
@@ -180,10 +189,13 @@ def compute_content_vector(content: dict, total_tags=100):
     :return:
     """
     vec = np.zeros(total_tags)
+
     for tag in content.get('primary'):
         vec[tag] = 10
+
     for tag in content.get('secondary'):
         vec[tag] = 1
+
     return vec
 
 
@@ -198,6 +210,7 @@ def compute_query_vectory(query, total_tags=100):
     vec = np.zeros(total_tags)
     for tag, weight in query.items():
         vec[tag] = weight
+
     return vec
 
 
@@ -211,6 +224,29 @@ def cosine_similarity(vec1, vec2):
     dot_prod = np.dot(vec1, vec2)
     norm1 = np.linalg.norm(vec1)
     norm2 = np.linalg.norm(vec2)
+
     if norm1 == 0 or norm2 == 0:
         return 0.0
+
     return dot_prod / (norm1 * norm1)
+
+
+OnlineUsers = {
+    # Store online users in format ID:Object[User]
+}
+Reactions = {
+    0: User.like,
+    1: User.dislike,
+    2: User.ignore,
+    3: User.donate
+}
+
+
+# API Functions
+def getNextN(userID, n):
+    # GET
+    return OnlineUsers[userID].getNextN(n)
+
+
+def react(userID, reactionNum):
+    OnlineUsers[userID].Reactions[reactionNum]()
