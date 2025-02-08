@@ -454,7 +454,6 @@ def logOut(userID: int):
     del OnlineUsers[userID]
 
 
-
 @app.post("/queueUpdate")
 def queueUpdate(nonprofitID: int):
     updateQueue.append(nonprofitID)
