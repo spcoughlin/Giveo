@@ -10,6 +10,7 @@ import numpy as np
 from sortedcontainers import SortedList
 from pymongo import MongoClient
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 import h5py
 
 # -----------------
@@ -68,8 +69,8 @@ class Database:
 
         size = ids.shape[0]
 
-        ids.resize((size+1,))
-        vectors.resize((size+1, 100))
+        ids.resize((size + 1,))
+        vectors.resize((size + 1, 100))
 
         ids[size] = id
         vectors[size] = vector
@@ -97,6 +98,8 @@ class Database:
     def get(self, file, name, id):
         ids = file[f"{name}_ids"][:]
         vectors = file[f"{name}_vectors"]
+        if id not in ids:
+            return None
 
         index = np.where(ids == id)[0]
 
@@ -111,6 +114,14 @@ class Database:
     def close(self):
         self.userFile.close()
         self.nonprofitFile.close()
+
+    def backup(self):
+        self.userFile.close()
+        self.nonprofitFile.close()
+        self.userFile = h5py.File(self.userFile, "a")
+        self.nonprofitFile = h5py.File(self.nonprofitFile, "a")
+        self.ensureDatasets(self.userFile, "user")
+        self.ensureDatasets(self.userFile, "nonprofit")
 
 
 class UserTagTable:
@@ -182,6 +193,21 @@ class UserTagTable:
             tag = self.getNthTag(i)
             query[tag] = self.getVal(tag)
         return query
+
+    def getFullVector(self, total_tags = 100):
+        dictVersion = {}
+        for i in range(len(self.data)):
+            tag = self.getNthTag(i)
+            dictVersion[tag] = self.getVal(tag)
+        for i in self.zeroTags:
+            dictVersion[i] = 0.0
+
+        vec = np.zeros(total_tags)
+        for tag, weight in dictVersion.items():
+            vec[tag] = weight
+        return vec
+
+
 
     # ---------------
     #    Behaviors
@@ -412,11 +438,8 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
             raise Exception("Invalid Reaction")
 
 
-Database = Database("users.h5", "nonprofits.h5")
-
-
 # ---------------------
-#  Helper “API” methods
+#  API
 # ---------------------
 
 @app.get("/nextN")
@@ -444,16 +467,35 @@ def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.
 @app.post("/logOn")
 def logOn(userID: int):
     # Pull User class data from db and construct a User Object
-    user = User(userID)
+    user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID)
     OnlineUsers[userID] = user
+    return PlainTextResponse("success")
 
 
 @app.post("logOff")
 def logOut(userID: int):
     # Remove User class, update tags in big (bug) db
+    database.updateUserVector(userID, )
     del OnlineUsers[userID]
 
 
 @app.post("/queueUpdate")
 def queueUpdate(nonprofitID: int):
     updateQueue.append(nonprofitID)
+
+
+# Open Appie Wappie
+database: Database = None
+
+
+def run():
+    global database
+    database = Database("users.h5", "nonprofits.h5")
+
+
+def exit():
+    global database
+    if not database:
+        return
+    else:
+        database.close()
