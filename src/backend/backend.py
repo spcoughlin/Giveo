@@ -1,6 +1,5 @@
 import json
 import random
-import time
 from collections import deque
 from copy import deepcopy
 
@@ -31,6 +30,7 @@ with open("tags.txt", "r") as f:
     for line in f:
         temp = line.split(" : ")
         Tags[int(temp[0])] = temp[1]
+
 
 # -----------------
 #     Classes
@@ -145,7 +145,8 @@ class NonProfit:
         self.tags = {"primary": primary, "secondary": secondary}
         self.dynamic_tags = {-1: 50.0, -2: 50.0, -3: 50.0}
         self.dtUpdates = 0
-    def changeDynamicTags(self, dtVals: dict):
+
+    def updateDynamicTags(self, dtVals: dict):
         self.dynamic_tags = {i: self.dynamic_tags[i] * self.dtUpdates for i in self.dynamic_tags}
         self.dtUpdates += 1
         for i in dtVals:
