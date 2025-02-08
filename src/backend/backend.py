@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy as np
 from sortedcontainers import SortedList
 from fastapi import FastAPI
+
 app = FastAPI()
 
 Tags = {
@@ -53,7 +54,7 @@ class UserTagTable:
 
     def getNthTag(self, n):
         """Get the nth ordered tag"""
-        if 0 <= n < len(self.sorted_list):
+        if 0 <= abs(n) < len(self.sorted_list):
             return self.sorted_list[n][1]
         raise IndexError("Index out of range")
 
@@ -185,19 +186,19 @@ class User:
         self.tags.dislike(nonprofit)
 
 
-def compute_content_vector(content: dict, total_tags=100):
+def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
     """
-    Build 100-dimensional vector for content
-    :param content:
+    Build 100-dimensional vector for nonprofit
+    :param nonprofit:
     :param total_tags:
     :return:
     """
     vec = np.zeros(total_tags)
 
-    for tag in content.get('primary'):
+    for tag in nonprofit.get('primary'):
         vec[tag] = 10
 
-    for tag in content.get('secondary'):
+    for tag in nonprofit.get('secondary'):
         vec[tag] = 1
 
     return vec
@@ -246,7 +247,7 @@ Reactions = {
 }
 
 
-### API Functions
+# API Functions
 
 @app.get("/nextCharities")
 def nextCharity(userID: int, n: int):
