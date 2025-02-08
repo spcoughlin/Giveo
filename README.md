@@ -1,1 +1,3 @@
-# HackNYU2025
+# Giveo
+
+landing page: https://giveo.today
