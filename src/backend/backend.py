@@ -4,6 +4,8 @@ from collections import deque
 from copy import deepcopy
 import numpy as np
 from sortedcontainers import SortedList
+from fastapi import FastAPI
+app = FastAPI()
 
 Tags = {
     # TODO: Add tags
@@ -22,12 +24,10 @@ Events = {
 
 
 class UserTagTable:
-    def __init__(self):
+    def __init__(self, userID):
         self.data = {tag: 50.0 for tag in Tags}
         self.sorted_list = SortedList()  # stored in form (value, tag)
         self.zeroTags = deque()
-        self.upcomingSet = set()
-        self.upcomingQueue = deque()
 
     def set(self, tag, val):
         if tag in self.data:
@@ -122,6 +122,8 @@ class User:
         self.donations = deque()
         self.seenSet = set()
         self.seenQueue = deque()
+        self.upcomingSet = set()
+        self.upcomingQueue = deque()
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
@@ -244,12 +246,13 @@ Reactions = {
 }
 
 
-# API Functions
-def nextN(userID, n):
-    # GET
+### API Functions
+
+@app.get("/nextCharities")
+def nextCharity(userID: int, n: int):
     return OnlineUsers[userID].getNextN(n)
 
 
-def reaction(userID, reactionNum):
-    # POST
+@app.post("/reaction")
+def reaction(userID: int, reactionNum: int):
     OnlineUsers[userID].Reactions[reactionNum]()
