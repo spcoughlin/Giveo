@@ -85,7 +85,7 @@ class UserTagTable:
     def clone(self):
         """Deep copy this UserTagTable."""
         clone = UserTagTable(-1)
-        clone.data = deepcopy(self.data)
+        clone.data = deepcopy(self.data) # Dont need deepcopy but :shrug:
         clone.sorted_list = SortedList(self.sorted_list)
         clone.zeroTags = deepcopy(self.zeroTags)
         return clone
@@ -93,8 +93,7 @@ class UserTagTable:
     def getCompTags(self):
         """Return top-20 tags (lowest indices in sorted_list) and their values."""
         query = {}
-        limit = min(20, len(self.sorted_list))
-        for i in range(limit):
+        for i in range(20):
             tag = self.getNthTag(i)
             query[tag] = self.getVal(tag)
         return query
@@ -165,23 +164,25 @@ class User:
         self.upcomingQueue = deque()
 
     def chooseEvent(self) -> int:
-        """Simulates logic for picking an event (basic, disrupt, return, gem, trending, repeat, etc.)"""
         r = random.randint(0, 99)
         if r == 0:
-            return 1  # disrupt
+            return 1
         if r == 1:
-            return 2  # return
-        if 2 <= r < 75:
-            return 0  # basic
-        if 75 <= r < 85:
-            # gem
-            return 3
-        if 85 <= r < 95:
-            # trending
-            return 4
-        if 95 <= r < 100:
-            # repeat
-            return 5
+            return 2
+        if r in range(2, 75):
+            return 0
+        if r in range(76, 85):
+            if -1 in self.tags:
+                return 3
+            else:
+                return 0 if random.getrandbits(1) else 3
+        if r in range(86, 95):
+            return 4 if -2 in self.getCompTags(0) else 0
+        if r in range(96, 99):
+            if -3 in self.getCompTags(0):
+                return 5
+            else:
+                return 0 if random.getrandbits(1) else 5
 
     def getCompTags(self, event) -> dict:
         """
@@ -224,10 +225,16 @@ class User:
     # --------------------
     def like(self, nonprofit):
         self.tags.like(nonprofit)
+        nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
+                                     -2: self.tags.getVal(-2),
+                                     -3: self.tags.getVal(-3)})
 
     def donate(self, nonprofit, amount):
         self.tags.donate(nonprofit)
         self.donations.append(nonprofit)
+        nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
+                                     -2: self.tags.getVal(-2),
+                                     -3: self.tags.getVal(-3)})
 
     def ignore(self, nonprofit):
         self.tags.ignore(nonprofit)
@@ -252,14 +259,10 @@ class User:
         """
         sending = []
         for _ in range(n):
-            if len(self.upcomingQueue) == 0:
+            sending.append(NP := self.upcomingQueue.popleft())
+            self.upcomingSet.remove(NP)
+            if len(self.upcomingSet) < 5:
                 self.refreshQueue()
-                if len(self.upcomingQueue) == 0:
-                    # No data to provide
-                    break
-            NP = self.upcomingQueue.popleft()
-            sending.append(NP)
-            self.upcomingSet.discard(NP)
 
         return json.dumps(sending)
 
