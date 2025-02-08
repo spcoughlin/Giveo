@@ -109,7 +109,7 @@ class Database:
         self.get(self.userFile, "user", id)
 
     def getNonprofit(self, id):
-        self.get(self.nonprofitFile, "nonprofit", id)
+        return self.get(self.nonprofitFile, "nonprofit", id)
 
     def close(self):
         self.userFile.close()
@@ -122,6 +122,9 @@ class Database:
         self.nonprofitFile = h5py.File(self.nonprofitFile, "a")
         self.ensureDatasets(self.userFile, "user")
         self.ensureDatasets(self.userFile, "nonprofit")
+
+
+database: Database = Database("users.h5", "nonprofits.h5")
 
 
 class UserTagTable:
@@ -194,7 +197,7 @@ class UserTagTable:
             query[tag] = self.getVal(tag)
         return query
 
-    def getFullVector(self, total_tags = 100):
+    def getFullVector(self, total_tags=100):
         dictVersion = {}
         for i in range(len(self.data)):
             tag = self.getNthTag(i)
@@ -206,8 +209,6 @@ class UserTagTable:
         for tag, weight in dictVersion.items():
             vec[tag] = weight
         return vec
-
-
 
     # ---------------
     #    Behaviors
@@ -354,10 +355,6 @@ class User:
     #   Scheduling / Next
     # --------------------
     async def refreshQueue(self):
-        """
-        Dummy stub: In a real system, you'd query DB or recommendation engine,
-        fill `self.upcomingQueue` with new nonprofits, etc.
-        """
         pass
 
     def getNextN(self, n):
@@ -371,7 +368,10 @@ class User:
         for _ in range(n):
             sending.append(NP := self.upcomingQueue.popleft())
             self.upcomingSet.remove(NP)
-        return json.dumps(sending)
+        return sending
+
+    def getFullVector(self):
+        return self.tags.getFullVector()
 
 
 # -----------------
@@ -446,22 +446,25 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 def nextCharity(userID: int, n: int = 3):
     if userID not in OnlineUsers:
         return
-    return OnlineUsers[userID].getNextN(n)
+    return {"array": OnlineUsers[userID].getNextN(n)}
 
 
 @app.post("/reaction")
 def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.0):
     if userID not in OnlineUsers:
-        return
+        return PlainTextResponse("FAIL: User not online")
 
     if reactionNum > 3 or reactionNum < 0:
-        return
+        return PlainTextResponse("FAIL: Invalid reaction number")
 
     user = OnlineUsers[userID]
     if reactionNum == 3:
-        react(3, user, nonprofitID, amount)
+        react(3, user, database.getNonprofit(nonprofitID), amount)
+
     else:
-        react(reactionNum, user, nonprofitID)
+        react(reactionNum, user, database.getNonprofit(nonprofitID))
+
+    return PlainTextResponse("success")
 
 
 @app.post("/logOn")
@@ -472,30 +475,25 @@ def logOn(userID: int):
     return PlainTextResponse("success")
 
 
-@app.post("logOff")
+@app.post("/logOff")
 def logOut(userID: int):
     # Remove User class, update tags in big (bug) db
-    database.updateUserVector(userID, )
+    database.updateUserVector(userID, OnlineUsers[userID].getFullVector())
     del OnlineUsers[userID]
+    return PlainTextResponse("success")
 
 
 @app.post("/queueUpdate")
 def queueUpdate(nonprofitID: int):
     updateQueue.append(nonprofitID)
+    return PlainTextResponse("success")
 
 
-# Open Appie Wappie
-database: Database = None
-
-
+# Main Methods
 def run():
     global database
     database = Database("users.h5", "nonprofits.h5")
 
 
 def exit():
-    global database
-    if not database:
-        return
-    else:
-        database.close()
+    database.close()
