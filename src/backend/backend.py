@@ -264,14 +264,15 @@ class User:
             self.id = id
             self.tags = UserTagTable(self.id)
             self.vector = compute_query_vectory(self.tags.getCompTags())
-            #  self.donations = deque()
-            self.seenSet = set()
-            self.seenQueue = deque()
-            self.upcomingSet = set()
-            self.upcomingQueue = deque()
         else:
             self.id = id
             self.tags = UserTagTable(self.id, vector=vector) if vector else UserTagTable(self.id)
+
+        self.seenSet = set()
+        self.seenQueue = deque()
+        self.upcomingSet = set()
+        self.upcomingQueue = deque()
+
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
