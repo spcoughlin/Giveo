@@ -1,3 +1,4 @@
+import base64
 import json
 import random
 from collections import deque
@@ -9,17 +10,17 @@ import numpy as np
 from sortedcontainers import SortedList
 from pymongo import MongoClient
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
+import h5py
 
 # -----------------
 #    Global Data
 # -----------------
-MONGO_URI = os.getenv("MONGO_URI")
-client = MongoClient(MONGO_URI)
+CLOUD_MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(CLOUD_MONGO_URI)
 
-db = client["SwipeApp"]
-charitiesCollection = db["Charities"]
-usersCollection = db["Users"]
-donationsCollection = db["Donations"]
+cloudDB = client["SwipeApp"]
+charitiesCollection = cloudDB["Charities"]
 
 app = FastAPI()
 
@@ -49,11 +50,92 @@ with open("tags.txt", "r") as f:
 # -----------------
 #     Classes
 # -----------------
+class Database:
+    def __init__(self, userFile, nonprofitFile):
+        self.userFile = h5py.File(userFile, "a")
+        self.nonprofitFile = h5py.File(nonprofitFile, "a")
+
+        self.ensureDatasets(self.userFile, "user")
+        self.ensureDatasets(self.userFile, "nonprofit")
+
+    def ensureDatasets(self, file, name):
+        if f"{name}_ids" not in file:
+            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S12")
+            file.create_dataset(f"{name}_vectors", shape=(0, 100), maxshape=(None, 100), dtype=np.float32)
+
+    def addVector(self, file, name, id, vector):
+        ids = file[f"{name}_ids"]
+        vectors = file[f"{name}_vectors"]
+
+        size = ids.shape[0]
+
+        ids.resize((size + 1,))
+        vectors.resize((size + 1, 100))
+
+        ids[size] = id
+        vectors[size] = vector
+
+    def addUser(self, id, vector):
+        self.addVector(self.userFile, "user", id, vector)
+
+    def addNonprofit(self, id, vector):
+        self.addVector(self.nonprofitFile, "nonprofit", id, vector)
+
+    def updateVector(self, file, name, id, newVector):
+        ids = file[f"{name}_ids"][:]
+        vectors = file[f"{name}_vectors"]
+
+        index = np.where(ids == id)[0]
+
+        vectors[index[0]] = newVector
+
+    def updateUserVector(self, id, newVector):
+        self.updateVector(self.userFile, "user", id, newVector)
+
+    def updateNonprofitVector(self, id, newVector):
+        self.updateVector(self.nonprofitFile, "nonprofit", id, newVector)
+
+    def get(self, file, name, id):
+        ids = file[f"{name}_ids"][:]
+        vectors = file[f"{name}_vectors"]
+        if id not in ids:
+            return None
+
+        index = np.where(ids == id)[0]
+
+        return vectors[index[0]]
+
+    def getUser(self, id):
+        self.get(self.userFile, "user", id)
+
+    def getNonprofit(self, id):
+        self.get(self.nonprofitFile, "nonprofit", id)
+
+    def close(self):
+        self.userFile.close()
+        self.nonprofitFile.close()
+
+    def backup(self):
+        self.userFile.close()
+        self.nonprofitFile.close()
+        self.userFile = h5py.File(self.userFile, "a")
+        self.nonprofitFile = h5py.File(self.nonprofitFile, "a")
+        self.ensureDatasets(self.userFile, "user")
+        self.ensureDatasets(self.userFile, "nonprofit")
+
+
 class UserTagTable:
-    def __init__(self, userID):
-        self.data = {tag: 50.0 for tag in Tags}
+    def __init__(self, userID, vector=None):
         self.sorted_list = SortedList()  # stored as (value, tag)
         self.zeroTags = deque()
+        if not vector:
+            self.data = {tag: .5 for tag in Tags}
+        else:
+            self.data = {}
+            for i in range(len(vector)):
+                self.data[i] = vector[i]
+                if vector[i] == 0:
+                    self.zeroTags.append(i)
         # Initialize sorted_list
         for tag, val in self.data.items():
             self.sorted_list.add((val, tag))
@@ -112,68 +194,83 @@ class UserTagTable:
             query[tag] = self.getVal(tag)
         return query
 
+    def getFullVector(self, total_tags = 100):
+        dictVersion = {}
+        for i in range(len(self.data)):
+            tag = self.getNthTag(i)
+            dictVersion[tag] = self.getVal(tag)
+        for i in self.zeroTags:
+            dictVersion[i] = 0.0
+
+        vec = np.zeros(total_tags)
+        for tag, weight in dictVersion.items():
+            vec[tag] = weight
+        return vec
+
+
+
     # ---------------
     #    Behaviors
     # ---------------
+
     def like(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.1)
+            self.set(tag, val + (1 - val) * 0.1)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.01)
+            self.set(tag, val + (1 - val) * 0.01)
 
     def donate(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.25)
+            self.set(tag, val + (1 - val) * 0.25)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.025)
+            self.set(tag, val + (1 - val) * 0.025)
 
     def ignore(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag) * 0.9
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag) * 0.99
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
     def dislike(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag) * 0.75
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag) * 0.975
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
 
 class NonProfit:
     def __init__(self, id, primary, secondary):
         self.id = id
         self.tags = {"primary": primary, "secondary": secondary}
-        self.dtUpdates = 0
-        self.newOperations = []  # Store operations, then update charity on Logout
 
 
 class User:
-    def __init__(self, id):
-        if id != -1:
-            # Log user in and query their data from DB
-            pass
-        else:
+    def __init__(self, id, vector=None, new=False):
+        if new:
             # new user
-            self.id = id  # TODO: replace with next id available
+            self.id = id
             self.tags = UserTagTable(self.id)
+            self.vector = compute_query_vectory(self.tags.getCompTags())
             #  self.donations = deque()
             self.seenSet = set()
             self.seenQueue = deque()
             self.upcomingSet = set()
             self.upcomingQueue = deque()
+        else:
+            self.id = id
+            self.tags = UserTagTable(self.id, vector=vector) if vector else UserTagTable(self.id)
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
@@ -243,7 +340,6 @@ class User:
 
     def donate(self, nonprofit, amount):
         self.tags.donate(nonprofit)
-        self.donations.append(nonprofit)
         # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
         #                             -2: self.tags.getVal(-2),
         #                             -3: self.tags.getVal(-3)})
@@ -257,7 +353,7 @@ class User:
     # --------------------
     #   Scheduling / Next
     # --------------------
-    def refreshQueue(self):
+    async def refreshQueue(self):
         """
         Dummy stub: In a real system, you'd query DB or recommendation engine,
         fill `self.upcomingQueue` with new nonprofits, etc.
@@ -270,12 +366,11 @@ class User:
         If the queue gets too small, refresh it.
         """
         sending = []
+        if len(self.upcomingSet) < n:
+            self.refreshQueue()
         for _ in range(n):
             sending.append(NP := self.upcomingQueue.popleft())
             self.upcomingSet.remove(NP)
-            if len(self.upcomingSet) < 5:
-                self.refreshQueue()
-
         return json.dumps(sending)
 
 
@@ -344,57 +439,63 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 
 
 # ---------------------
-#  Helper “API” methods
+#  API
 # ---------------------
-def nextCharity(userID: int, n: int):
-    """
-    Return next N charities from user’s queue (JSON).
-    """
+
+@app.get("/nextN")
+def nextCharity(userID: int, n: int = 3):
     if userID not in OnlineUsers:
-        return json.dumps({"error": "User not found"})
+        return
     return OnlineUsers[userID].getNextN(n)
 
 
-def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount: float = 0.0):
-    """
-    Apply a reaction (like, dislike, ignore, donate) on behalf of user.
-    If you do 'donate', pass an amount and a nonprofit object or ID.
-    """
+@app.post("/reaction")
+def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.0):
     if userID not in OnlineUsers:
-        return {"error": "User not found"}
+        return
+
+    if reactionNum > 3 or reactionNum < 0:
+        return
 
     user = OnlineUsers[userID]
-
-    # Reaction is a bound method, e.g. User.like, which expects user.like(nonprofit)
-    # For donate, we do user.donate(nonprofit, amount)
-
     if reactionNum == 3:
-        # Donate path
-        if nonprofit is None:
-            return {"error": "Must provide a nonprofit to donate to."}
-        react(3, user, nonprofit, amount)  # user.donate(nonprofit, amount)
-        return {"message": "Donation recorded"}
+        react(3, user, nonprofitID, amount)
     else:
-        # For like, dislike, ignore – we do user.like(nonprofit), etc.
-        if nonprofit is None:
-            return {"error": "Must provide a nonprofit to apply reaction"}
-        react(reactionNum, user, nonprofit)
-        return {"message": f"Reaction {reactionNum} applied"}
+        react(reactionNum, user, nonprofitID)
 
 
 @app.post("/logOn")
 def logOn(userID: int):
     # Pull User class data from db and construct a User Object
-    user = User(userID)
+    user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID)
     OnlineUsers[userID] = user
+    return PlainTextResponse("success")
 
 
 @app.post("logOff")
 def logOut(userID: int):
     # Remove User class, update tags in big (bug) db
-    OnlineUsers.pop(userID)
+    database.updateUserVector(userID, )
+    del OnlineUsers[userID]
 
 
 @app.post("/queueUpdate")
 def queueUpdate(nonprofitID: int):
     updateQueue.append(nonprofitID)
+
+
+# Open Appie Wappie
+database: Database = None
+
+
+def run():
+    global database
+    database = Database("users.h5", "nonprofits.h5")
+
+
+def exit():
+    global database
+    if not database:
+        return
+    else:
+        database.close()
