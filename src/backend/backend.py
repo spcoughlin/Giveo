@@ -154,14 +154,19 @@ class NonProfit:
 
 
 class User:
-    def __init__(self, id, tags: UserTagTable):
-        self.id = id
-        self.tags = tags
-        self.donations = deque()
-        self.seenSet = set()
-        self.seenQueue = deque()
-        self.upcomingSet = set()
-        self.upcomingQueue = deque()
+    def __init__(self, id):
+        if id != -1:
+            # Log user in and query their data from DB
+            pass
+        else:
+            # new user
+            self.id = id  # TODO: replace with next id available
+            self.tags = UserTagTable(self.id)
+            self.donations = deque()
+            self.seenSet = set()
+            self.seenQueue = deque()
+            self.upcomingSet = set()
+            self.upcomingQueue = deque()
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
@@ -367,6 +372,17 @@ def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount:
         react_func(user, nonprofit)
         return {"message": f"Reaction {reactionNum} applied"}
 
+
+def logOn(userID):
+    # Pull User class data from db and construct a User Object
+    user = User(userID)
+    OnlineUsers[userID] = user
+    # Calculate cosine similarity for all base cases, cache in local db
+
+
+def logOut(userID):
+    # Remove User class, update tags in big (bug) db
+    OnlineUsers.pop(userID)
 
 # ================================
 #     LAMBDA HANDLER FUNCTIONS
