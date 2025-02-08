@@ -114,10 +114,17 @@ class Database:
 
 
 class UserTagTable:
-    def __init__(self, userID):
-        self.data = {tag: .5 for tag in Tags}
+    def __init__(self, userID, vector=None):
         self.sorted_list = SortedList()  # stored as (value, tag)
         self.zeroTags = deque()
+        if not vector:
+            self.data = {tag: .5 for tag in Tags}
+        else:
+            self.data = {}
+            for i in range(len(vector)):
+                self.data[i] = vector[i]
+                if vector[i] == 0:
+                    self.zeroTags.append(i)
         # Initialize sorted_list
         for tag, val in self.data.items():
             self.sorted_list.add((val, tag))
@@ -180,66 +187,64 @@ class UserTagTable:
     #    Behaviors
     # ---------------
 
-    # TODO: Migrate to local database instead of using nonprofit object
     def like(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.1)
+            self.set(tag, val + (1 - val) * 0.1)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.01)
+            self.set(tag, val + (1 - val) * 0.01)
 
     def donate(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.25)
+            self.set(tag, val + (1 - val) * 0.25)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag)
-            self.set(tag, val + (100 - val) * 0.025)
+            self.set(tag, val + (1 - val) * 0.025)
 
     def ignore(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag) * 0.9
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag) * 0.99
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
     def dislike(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag) * 0.75
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
             val = self.getVal(tag) * 0.975
-            self.set(tag, val if val >= 0.05 else 0)
+            self.set(tag, val if val >= 0.0005 else 0)
 
 
 class NonProfit:
     def __init__(self, id, primary, secondary):
         self.id = id
         self.tags = {"primary": primary, "secondary": secondary}
-        self.dtUpdates = 0
-        self.newOperations = []  # Store operations, then update charity on Logout. Do not implement unless time.
 
 
 class User:
-    def __init__(self, id):
-        if id != -1:
-            # Log user in and query their data from DB
-            pass
-        else:
+    def __init__(self, id, vector=None, new=False):
+        if new:
             # new user
-            self.id = id  # TODO: replace with next id available
+            self.id = id
             self.tags = UserTagTable(self.id)
+            self.vector = compute_query_vectory(self.tags.getCompTags())
             #  self.donations = deque()
             self.seenSet = set()
             self.seenQueue = deque()
             self.upcomingSet = set()
             self.upcomingQueue = deque()
+        else:
+            self.id = id
+            self.tags = UserTagTable(self.id, vector=vector) if vector else UserTagTable(self.id)
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
@@ -301,28 +306,28 @@ class User:
     # --------------------
     #   Reaction methods
     # --------------------
-    def like(self, nonprofitID):
-        self.tags.like(nonprofitID)
+    def like(self, nonprofit):
+        self.tags.like(nonprofit)
         # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
         #                             -2: self.tags.getVal(-2),
         #                             -3: self.tags.getVal(-3)})
 
-    def donate(self, nonprofitID, amount):
-        self.tags.donate(nonprofitID)
+    def donate(self, nonprofit, amount):
+        self.tags.donate(nonprofit)
         # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
         #                             -2: self.tags.getVal(-2),
         #                             -3: self.tags.getVal(-3)})
 
-    def ignore(self, nonprofitID):
-        self.tags.ignore(nonprofitID)
+    def ignore(self, nonprofit):
+        self.tags.ignore(nonprofit)
 
-    def dislike(self, nonprofitID):
-        self.tags.dislike(nonprofitID)
+    def dislike(self, nonprofit):
+        self.tags.dislike(nonprofit)
 
     # --------------------
     #   Scheduling / Next
     # --------------------
-    def refreshQueue(self):
+    async def refreshQueue(self):
         """
         Dummy stub: In a real system, you'd query DB or recommendation engine,
         fill `self.upcomingQueue` with new nonprofits, etc.
@@ -335,12 +340,11 @@ class User:
         If the queue gets too small, refresh it.
         """
         sending = []
+        if len(self.upcomingSet) < n:
+            self.refreshQueue()
         for _ in range(n):
             sending.append(NP := self.upcomingQueue.popleft())
             self.upcomingSet.remove(NP)
-            if len(self.upcomingSet) < 5:
-                self.refreshQueue()
-
         return json.dumps(sending)
 
 
@@ -406,6 +410,9 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
             user.donate(nonProfit, amount)
         case _:
             raise Exception("Invalid Reaction")
+
+
+Database = Database("users.h5", "nonprofits.h5")
 
 
 # ---------------------
