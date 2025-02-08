@@ -1,3 +1,4 @@
+import base64
 import json
 import random
 from collections import deque
@@ -9,17 +10,16 @@ import numpy as np
 from sortedcontainers import SortedList
 from pymongo import MongoClient
 from fastapi import FastAPI
+import h5py
 
 # -----------------
 #    Global Data
 # -----------------
-MONGO_URI = os.getenv("MONGO_URI")
-client = MongoClient(MONGO_URI)
+CLOUD_MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(CLOUD_MONGO_URI)
 
-db = client["SwipeApp"]
-charitiesCollection = db["Charities"]
-usersCollection = db["Users"]
-donationsCollection = db["Donations"]
+cloudDB = client["SwipeApp"]
+charitiesCollection = cloudDB["Charities"]
 
 app = FastAPI()
 
@@ -49,9 +49,73 @@ with open("tags.txt", "r") as f:
 # -----------------
 #     Classes
 # -----------------
+class Database:
+    def __init__(self, userFile, nonprofitFile):
+        self.userFile = h5py.File(userFile, "a")
+        self.nonprofitFile = h5py.File(nonprofitFile, "a")
+
+        self.ensureDatasets(self.userFile, "user")
+        self.ensureDatasets(self.userFile, "nonprofit")
+
+    def ensureDatasets(self, file, name):
+        if f"{name}_ids" not in file:
+            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S12")
+            file.create_dataset(f"{name}_vectors", shape=(0, 100), maxshape=(None, 100), dtype=np.float32)
+
+    def addVector(self, file, name, id, vector):
+        ids = file[f"{name}_ids"]
+        vectors = file[f"{name}_vectors"]
+
+        size = ids.shape[0]
+
+        ids.resize((size+1,))
+        vectors.resize((size+1, 100))
+
+        ids[size] = id
+        vectors[size] = vector
+
+    def addUser(self, id, vector):
+        self.addVector(self.userFile, "user", id, vector)
+
+    def addNonprofit(self, id, vector):
+        self.addVector(self.nonprofitFile, "nonprofit", id, vector)
+
+    def updateVector(self, file, name, id, newVector):
+        ids = file[f"{name}_ids"][:]
+        vectors = file[f"{name}_vectors"]
+
+        index = np.where(ids == id)[0]
+
+        vectors[index[0]] = newVector
+
+    def updateUserVector(self, id, newVector):
+        self.updateVector(self.userFile, "user", id, newVector)
+
+    def updateNonprofitVector(self, id, newVector):
+        self.updateVector(self.nonprofitFile, "nonprofit", id, newVector)
+
+    def get(self, file, name, id):
+        ids = file[f"{name}_ids"][:]
+        vectors = file[f"{name}_vectors"]
+
+        index = np.where(ids == id)[0]
+
+        return vectors[index[0]]
+
+    def getUser(self, id):
+        self.get(self.userFile, "user", id)
+
+    def getNonprofit(self, id):
+        self.get(self.nonprofitFile, "nonprofit", id)
+
+    def close(self):
+        self.userFile.close()
+        self.nonprofitFile.close()
+
+
 class UserTagTable:
     def __init__(self, userID):
-        self.data = {tag: 50.0 for tag in Tags}
+        self.data = {tag: .5 for tag in Tags}
         self.sorted_list = SortedList()  # stored as (value, tag)
         self.zeroTags = deque()
         # Initialize sorted_list
@@ -115,6 +179,8 @@ class UserTagTable:
     # ---------------
     #    Behaviors
     # ---------------
+
+    # TODO: Migrate to local database instead of using nonprofit object
     def like(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
@@ -157,7 +223,7 @@ class NonProfit:
         self.id = id
         self.tags = {"primary": primary, "secondary": secondary}
         self.dtUpdates = 0
-        self.newOperations = []  # Store operations, then update charity on Logout
+        self.newOperations = []  # Store operations, then update charity on Logout. Do not implement unless time.
 
 
 class User:
@@ -235,24 +301,23 @@ class User:
     # --------------------
     #   Reaction methods
     # --------------------
-    def like(self, nonprofit):
-        self.tags.like(nonprofit)
+    def like(self, nonprofitID):
+        self.tags.like(nonprofitID)
         # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
         #                             -2: self.tags.getVal(-2),
         #                             -3: self.tags.getVal(-3)})
 
-    def donate(self, nonprofit, amount):
-        self.tags.donate(nonprofit)
-        self.donations.append(nonprofit)
+    def donate(self, nonprofitID, amount):
+        self.tags.donate(nonprofitID)
         # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
         #                             -2: self.tags.getVal(-2),
         #                             -3: self.tags.getVal(-3)})
 
-    def ignore(self, nonprofit):
-        self.tags.ignore(nonprofit)
+    def ignore(self, nonprofitID):
+        self.tags.ignore(nonprofitID)
 
-    def dislike(self, nonprofit):
-        self.tags.dislike(nonprofit)
+    def dislike(self, nonprofitID):
+        self.tags.dislike(nonprofitID)
 
     # --------------------
     #   Scheduling / Next
@@ -346,40 +411,27 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 # ---------------------
 #  Helper “API” methods
 # ---------------------
-def nextCharity(userID: int, n: int):
-    """
-    Return next N charities from user’s queue (JSON).
-    """
+
+@app.get("/nextN")
+def nextCharity(userID: int, n: int = 3):
     if userID not in OnlineUsers:
-        return json.dumps({"error": "User not found"})
+        return
     return OnlineUsers[userID].getNextN(n)
 
 
-def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount: float = 0.0):
-    """
-    Apply a reaction (like, dislike, ignore, donate) on behalf of user.
-    If you do 'donate', pass an amount and a nonprofit object or ID.
-    """
+@app.post("/reaction")
+def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.0):
     if userID not in OnlineUsers:
-        return {"error": "User not found"}
+        return
+
+    if reactionNum > 3 or reactionNum < 0:
+        return
 
     user = OnlineUsers[userID]
-
-    # Reaction is a bound method, e.g. User.like, which expects user.like(nonprofit)
-    # For donate, we do user.donate(nonprofit, amount)
-
     if reactionNum == 3:
-        # Donate path
-        if nonprofit is None:
-            return {"error": "Must provide a nonprofit to donate to."}
-        react(3, user, nonprofit, amount)  # user.donate(nonprofit, amount)
-        return {"message": "Donation recorded"}
+        react(3, user, nonprofitID, amount)
     else:
-        # For like, dislike, ignore – we do user.like(nonprofit), etc.
-        if nonprofit is None:
-            return {"error": "Must provide a nonprofit to apply reaction"}
-        react(reactionNum, user, nonprofit)
-        return {"message": f"Reaction {reactionNum} applied"}
+        react(reactionNum, user, nonprofitID)
 
 
 @app.post("/logOn")
@@ -392,7 +444,8 @@ def logOn(userID: int):
 @app.post("logOff")
 def logOut(userID: int):
     # Remove User class, update tags in big (bug) db
-    OnlineUsers.pop(userID)
+    del OnlineUsers[userID]
+
 
 
 @app.post("/queueUpdate")
