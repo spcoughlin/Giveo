@@ -8,6 +8,7 @@ import os
 import numpy as np
 from sortedcontainers import SortedList
 from pymongo import MongoClient
+from fastapi import FastAPI
 
 # -----------------
 #    Global Data
@@ -19,6 +20,10 @@ db = client["SwipeApp"]
 charitiesCollection = db["Charities"]
 usersCollection = db["Users"]
 donationsCollection = db["Donations"]
+
+app = FastAPI()
+
+updateQueue = deque()
 
 Tags = {
     -1: "gem",
@@ -164,7 +169,7 @@ class User:
             # new user
             self.id = id  # TODO: replace with next id available
             self.tags = UserTagTable(self.id)
-            self.donations = deque()
+            #  self.donations = deque()
             self.seenSet = set()
             self.seenQueue = deque()
             self.upcomingSet = set()
@@ -359,8 +364,6 @@ def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount:
         return {"error": "User not found"}
 
     user = OnlineUsers[userID]
-    if reactionNum not in Reactions:
-        return {"error": f"Invalid reaction {reactionNum}"}
 
     # Reaction is a bound method, e.g. User.like, which expects user.like(nonprofit)
     # For donate, we do user.donate(nonprofit, amount)
@@ -379,13 +382,19 @@ def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount:
         return {"message": f"Reaction {reactionNum} applied"}
 
 
-def logOn(userID):
+@app.post("/logOn")
+def logOn(userID: int):
     # Pull User class data from db and construct a User Object
     user = User(userID)
     OnlineUsers[userID] = user
-    # Calculate cosine similarity for all base cases, cache in local db
 
 
-def logOut(userID):
+@app.post("logOff")
+def logOut(userID: int):
     # Remove User class, update tags in big (bug) db
     OnlineUsers.pop(userID)
+
+
+@app.post("/queueUpdate")
+def queueUpdate(nonprofitID: int):
+    updateQueue.append(nonprofitID)
