@@ -4,9 +4,9 @@ from collections import deque
 from copy import deepcopy
 import numpy as np
 from sortedcontainers import SortedList
-from fastapi import FastAPI
+import json
 
-app = FastAPI()
+# Access and add Tags
 
 Tags = {
     # TODO: Add tags
@@ -63,7 +63,7 @@ class UserTagTable:
         self.data[tag1], self.data[tag2] = self.data[tag2], self.data[tag1]
 
     def clone(self):
-        clone = UserTagTable()
+        clone = UserTagTable(-1)
         clone.data = deepcopy(self.data)  # Dont need deepcopy but :shrug:
         clone.sorted_list = SortedList(self.sorted_list)
         return clone
@@ -185,6 +185,17 @@ class User:
     def dislike(self, nonprofit):
         self.tags.dislike(nonprofit)
 
+    def refreshQueue(self):
+        # Need DB integration b4 can do this
+        pass
+    def getNextN(self, n):
+        sending = []
+        for i in range(n):
+            sending.append(NP := self.upcomingQueue.popleft())
+            self.upcomingSet.remove(NP)
+            if len(self.upcomingSet) < 5:
+                self.refreshQueue()
+        return json.dumps(sending)
 
 def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
     """
@@ -249,11 +260,9 @@ Reactions = {
 
 # API Functions
 
-@app.get("/nextCharities")
 def nextCharity(userID: int, n: int):
     return OnlineUsers[userID].getNextN(n)
 
 
-@app.post("/reaction")
 def reaction(userID: int, reactionNum: int):
     OnlineUsers[userID].Reactions[reactionNum]()
