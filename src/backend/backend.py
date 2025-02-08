@@ -162,6 +162,15 @@ class User:
     def like(self, nonprofit):
         self.tags.like(nonprofit)
 
+    def donate(self, nonprofit, amount=0.0):
+        self.tags.donate(nonprofit)
+
+    def dislike(self, nonprofit):
+        self.tags.dislike(nonprofit)
+
+    def ignore(self, nonprofit):
+        self.tags.ignore(nonprofit)
+
 
 def compute_content_vector(content: dict, total_tags=100):
     """
