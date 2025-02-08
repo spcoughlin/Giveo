@@ -26,6 +26,8 @@ class UserTagTable:
         self.data = {tag: 50.0 for tag in Tags}
         self.sorted_list = SortedList()  # stored in form (value, tag)
         self.zeroTags = deque()
+        self.upcomingSet = set()
+        self.upcomingQueue = deque()
 
     def set(self, tag, val):
         if tag in self.data:
@@ -243,10 +245,11 @@ Reactions = {
 
 
 # API Functions
-def getNextN(userID, n):
+def nextN(userID, n):
     # GET
     return OnlineUsers[userID].getNextN(n)
 
 
-def react(userID, reactionNum):
+def reaction(userID, reactionNum):
+    # POST
     OnlineUsers[userID].Reactions[reactionNum]()
