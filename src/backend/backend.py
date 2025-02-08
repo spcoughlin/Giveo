@@ -2,16 +2,25 @@ import json
 import random
 from collections import deque
 from copy import deepcopy
+import os
 
 # Third-party packages
 import numpy as np
 from sortedcontainers import SortedList
+from pymongo import MongoClient
 
 # -----------------
 #    Global Data
 # -----------------
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
+
+db = client["SwipeApp"]
+charitiesCollection = db["Charities"]
+usersCollection = db["Users"]
+donationsCollection = db["Donations"]
+
 Tags = {
-    # TODO: Add tags
     -1: "gem",
     -2: "trending",
     -3: "repeat"
@@ -85,7 +94,7 @@ class UserTagTable:
     def clone(self):
         """Deep copy this UserTagTable."""
         clone = UserTagTable(-1)
-        clone.data = deepcopy(self.data) # Dont need deepcopy but :shrug:
+        clone.data = deepcopy(self.data)  # Dont need deepcopy but :shrug:
         clone.sorted_list = SortedList(self.sorted_list)
         clone.zeroTags = deepcopy(self.zeroTags)
         return clone
@@ -142,15 +151,8 @@ class NonProfit:
     def __init__(self, id, primary, secondary):
         self.id = id
         self.tags = {"primary": primary, "secondary": secondary}
-        self.dynamic_tags = {-1: 50.0, -2: 50.0, -3: 50.0}
         self.dtUpdates = 0
-
-    def updateDynamicTags(self, dtVals: dict):
-        self.dynamic_tags = {i: self.dynamic_tags[i] * self.dtUpdates for i in self.dynamic_tags}
-        self.dtUpdates += 1
-        for i in dtVals:
-            self.dynamic_tags[i] += dtVals[i]
-        self.dynamic_tags = {i: self.dynamic_tags[i]/self.dtUpdates for i in self.dynamic_tags}
+        self.newOperations = []  # Store operations, then update charity on Logout
 
 
 class User:
@@ -230,16 +232,16 @@ class User:
     # --------------------
     def like(self, nonprofit):
         self.tags.like(nonprofit)
-        nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
-                                     -2: self.tags.getVal(-2),
-                                     -3: self.tags.getVal(-3)})
+        # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
+        #                             -2: self.tags.getVal(-2),
+        #                             -3: self.tags.getVal(-3)})
 
     def donate(self, nonprofit, amount):
         self.tags.donate(nonprofit)
         self.donations.append(nonprofit)
-        nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
-                                     -2: self.tags.getVal(-2),
-                                     -3: self.tags.getVal(-3)})
+        # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
+        #                             -2: self.tags.getVal(-2),
+        #                             -3: self.tags.getVal(-3)})
 
     def ignore(self, nonprofit):
         self.tags.ignore(nonprofit)
@@ -321,14 +323,19 @@ OnlineUsers = {
     # userID -> User object
 }
 
-# Reactions map to methods on `User`, but each needs a `nonprofit` param if you want to do user.like(nonprofit).
-# For a real system, you'd have to pass the chosen NonProfit or ID of the NP to these calls.
-Reactions = {
-    0: User.like,
-    1: User.dislike,
-    2: User.ignore,
-    3: User.donate
-}
+
+def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
+    match n:
+        case 0:
+            user.like(nonProfit)
+        case 1:
+            user.dislike(nonProfit)
+        case 2:
+            user.ignore(nonProfit)
+        case 3:
+            user.donate(nonProfit, amount)
+        case _:
+            raise Exception("Invalid Reaction")
 
 
 # ---------------------
@@ -357,19 +364,18 @@ def reaction(userID: int, reactionNum: int, nonprofit: NonProfit = None, amount:
 
     # Reaction is a bound method, e.g. User.like, which expects user.like(nonprofit)
     # For donate, we do user.donate(nonprofit, amount)
-    react_func = Reactions[reactionNum]
 
     if reactionNum == 3:
         # Donate path
         if nonprofit is None:
             return {"error": "Must provide a nonprofit to donate to."}
-        react_func(user, nonprofit, amount)  # user.donate(nonprofit, amount)
+        react(3, user, nonprofit, amount)  # user.donate(nonprofit, amount)
         return {"message": "Donation recorded"}
     else:
         # For like, dislike, ignore – we do user.like(nonprofit), etc.
         if nonprofit is None:
             return {"error": "Must provide a nonprofit to apply reaction"}
-        react_func(user, nonprofit)
+        react(reactionNum, user, nonprofit)
         return {"message": f"Reaction {reactionNum} applied"}
 
 
@@ -383,67 +389,3 @@ def logOn(userID):
 def logOut(userID):
     # Remove User class, update tags in big (bug) db
     OnlineUsers.pop(userID)
-
-# ================================
-#     LAMBDA HANDLER FUNCTIONS
-# ================================
-def nextCharity_lambda_handler(event, context):
-    """
-    AWS Lambda handler for 'nextCharity' requests.
-    Expects JSON in event["body"]: { "userID": <int>, "n": <int> }
-    """
-    try:
-        body = json.loads(event["body"]) if "body" in event else event
-        userID = body.get("userID")
-        n = body.get("n", 1)
-    except Exception as e:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": f"Invalid input: {str(e)}"})
-        }
-
-    result_json = nextCharity(userID, n)
-    return {
-        "statusCode": 200,
-        "body": result_json
-    }
-
-
-def reaction_lambda_handler(event, context):
-    """
-    AWS Lambda handler for 'reaction' requests.
-    Expects JSON in event["body"]:
-      {
-         "userID": <int>,
-         "reactionNum": <int>,
-         "nonprofit": { "id": ..., "primary": [...], "secondary": [...] },
-         "amount": <float>   (optional, only used if reactionNum=3 = donate)
-      }
-    """
-    try:
-        body = json.loads(event["body"]) if "body" in event else event
-        userID = body.get("userID")
-        reactionNum = body.get("reactionNum")
-        nonprofit_dict = body.get("nonprofit")
-        amount = body.get("amount", 0.0)
-
-        # Convert nonprofit data to an object if provided
-        np_obj = None
-        if nonprofit_dict and "id" in nonprofit_dict:
-            np_obj = NonProfit(
-                id=nonprofit_dict["id"],
-                primary=nonprofit_dict.get("primary", []),
-                secondary=nonprofit_dict.get("secondary", [])
-            )
-    except Exception as e:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": f"Invalid input: {str(e)}"})
-        }
-
-    reaction_result = reaction(userID, reactionNum, nonprofit=np_obj, amount=amount)
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps(reaction_result)
-    }
