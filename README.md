@@ -30,7 +30,6 @@ Giveo is an innovative hackathon project built for **HackNYU2025**. The app reim
 - **Backend**: Python with FastAPI
 - **Frontend**: Swift (iOS)
 - **Server**: Amazon EC2
-- *(Optional: Add any additional services or databases if applicable)*
 
 ---
 
