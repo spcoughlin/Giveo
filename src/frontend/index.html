@@ -40,13 +40,25 @@
                 <img src="logo_red.png" alt="Giveo Logo" class="h-10 mr-2">
                 <h1 class="text-2xl font-bold text-[var(--primary-color)]">Giveo</h1>
             </div>
-            <nav>
+            <button class="md:hidden text-[var(--text-color)]" id="nav-toggle">☰</button>
+            <nav class="hidden md:flex space-x-4" id="nav-menu">
                 <a href="#how-it-works" class="text-[var(--text-color)] px-4">How It Works</a>
                 <a href="#get-started" class="text-[var(--text-color)] px-4">Get Started</a>
-                <a href="#about" class="text-[var(--text-color)] px-4">About Us</a>
+                <a href="#about" class="text-[var(--text-color)] px-4">About</a>
             </nav>
         </div>
+        <div class="md:hidden hidden flex flex-col bg-[var(--secondary-color)] p-4 space-y-2" id="mobile-menu">
+            <a href="#how-it-works" class="text-[var(--text-color)] py-2 block">How It Works</a>
+            <a href="#get-started" class="text-[var(--text-color)] py-2 block">Get Started</a>
+            <a href="#about" class="text-[var(--text-color)] py-2 block">About</a>
+        </div>
     </header>
+    
+    <script>
+        document.getElementById('nav-toggle').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
     
     <section class="text-center py-20 bg-[var(--block-color)] text-[var(--background-color)]">
         <blockquote class="italic text-lg">“Success isn’t about how much money you make. It’s about the difference you make in people’s lives.”<br>— Michelle Obama</blockquote>
