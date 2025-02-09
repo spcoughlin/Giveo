@@ -501,7 +501,7 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
 @app.post("/logOn")
 def logOn(userID: str):
     # Pull User class data from db and construct a User Object
-    user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID)
+    user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID, new=True)
     OnlineUsers[userID] = user
     return PlainTextResponse("success")
 
