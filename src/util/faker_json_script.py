@@ -119,7 +119,7 @@ def generate_record(fake):
       - heroImageURL: A simulated filename for the hero image.
       - logoImageURL: A simulated filename for the logo image.
       - primaryTags: A list of 3 tags chosen from the preset list.
-      - secondarySpecs: A list of 20 tags chosen from the preset list.
+      - secondaryTags: A list of 20 tags chosen from the preset list.
     """
     return {
         "name": fake.company(),
@@ -133,27 +133,39 @@ def generate_record(fake):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate fake charity data and save it as JSON."
+        description="Generate complete charity records by combining preexisting IDs with fake data."
     )
     parser.add_argument(
-        "num_records",
-        type=int,
-        help="Total number of charity records to generate."
+        "ids_filename",
+        type=str,
+        help="The JSON file containing the preexisting charity IDs."
     )
     parser.add_argument(
         "output_filename",
         type=str,
-        help="The JSON file to output the records to."
+        help="The JSON file to output the complete charity records to."
     )
     args = parser.parse_args()
 
+    # Load the preexisting charity IDs.
+    with open(args.ids_filename, "r") as infile:
+        preexisting_ids = json.load(infile)
+
     fake = Faker()
-    records = [generate_record(fake) for _ in range(args.num_records)]
-    
+
+    complete_records = []
+    # Iterate over the list of preexisting IDs.
+    for item in preexisting_ids:
+        record = generate_record(fake)
+        # Merge the preexisting 'id' into the fake record.
+        record["id"] = item["id"]
+        complete_records.append(record)
+
+    # Write the complete charity records to the output JSON file.
     with open(args.output_filename, "w") as outfile:
-        json.dump(records, outfile, indent=4)
-    
-    print(f"Successfully generated {args.num_records} records in '{args.output_filename}'.")
+        json.dump(complete_records, outfile, indent=4)
+
+    print(f"Successfully generated {len(complete_records)} charity records in '{args.output_filename}'.")
 
 if __name__ == "__main__":
     main()
