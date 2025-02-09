@@ -8,7 +8,6 @@ import json
 # Third-party packages
 import numpy as np
 from sortedcontainers import SortedList
-from pymongo import MongoClient
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 import h5py
@@ -16,9 +15,6 @@ import h5py
 # -----------------
 #    Global Data
 # -----------------
-CLOUD_MONGO_URI = os.getenv("MONGO_URI")
-client = MongoClient(CLOUD_MONGO_URI)
-
 cloudDB = client["SwipeApp"]
 charitiesCollection = cloudDB["Charities"]
 
@@ -196,23 +192,38 @@ class UserTagTable:
             self.sorted_list.add((val, tag))
 
     def set(self, tag, val):
-        """Update the value for a tag, keep sorted_list in sync."""
+        # Remove any old value from the sorted list if present.
         if tag in self.data:
             old_val = self.data[tag]
-            # Remove old entry from the sorted structure
-            self.sorted_list.remove((old_val, tag))
-
+            try:
+                self.sorted_list.remove((old_val, tag))
+            except ValueError:
+                pass  # In case it isn’t in the sorted list for some reason.
         self.data[tag] = val
         self.sorted_list.add((val, tag))
-
+    
         if val == 0:
             # Tag effectively 'zeroed out'
             self.zeroTags.append(tag)
-            self.sorted_list.remove((val, tag))
-            if len(self.zeroTags) > 25:
-                # too many zeroed-out tags => bump the oldest zeroed tag
-                self.set(self.zeroTags.popleft(), 10.0)
+            try:
+                self.sorted_list.remove((val, tag))
+            except ValueError:
+                pass
+    
+        # Instead of a recursive call, process the zeroTags queue iteratively.
+        while len(self.zeroTags) > 25:
+            bumped_tag = self.zeroTags.popleft()
+            # Directly update the tag value to 10.0 without calling set() recursively.
+            if bumped_tag in self.data:
+                old_val = self.data[bumped_tag]
+                try:
+                    self.sorted_list.remove((old_val, bumped_tag))
+                except ValueError:
+                    pass
+            self.data[bumped_tag] = 10.0
+            self.sorted_list.add((10.0, bumped_tag))
 
+    
     def remove(self, tag):
         """Remove a tag from data and sorted_list."""
         if tag in self.data:
