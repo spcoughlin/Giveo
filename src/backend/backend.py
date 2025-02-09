@@ -15,6 +15,7 @@ import h5py
 # -----------------
 #    Global Data
 # -----------------
+
 app = FastAPI()
 
 updateQueue = deque()
@@ -56,6 +57,7 @@ class Database:
     def ensureDatasets(self, file, name):
         if f"{name}_ids" not in file:
             file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S50")
+            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype=int)
             file.create_dataset(f"{name}_vectors", shape=(0, 100), maxshape=(None, 100), dtype=np.float32)
 
     def addVector(self, file, name, id_val, vector):
@@ -159,14 +161,14 @@ class UserTagTable:
                 pass
         self.data[tag] = val
         self.sorted_list.add((val, tag))
-    
+
         if val == 0:
             self.zeroTags.append(tag)
             try:
                 self.sorted_list.remove((val, tag))
             except ValueError:
                 pass
-    
+
         # Process the zeroTags queue iteratively.
         while len(self.zeroTags) > 25:
             bumped_tag = self.zeroTags.popleft()
@@ -281,6 +283,17 @@ class User:
         self.upcomingSet = set()
         self.upcomingQueue = deque()
 
+        self.bases = {}
+
+        np_ids = database.nonprofitFile["nonprofit_ids"][:]
+        np_vectors = database.nonprofitFile["nonprofit_vectors"][:]
+
+        for idx, np_id in enumerate(np_ids):
+            charity_id = int(np_id)  # Ensure ID is stored as an integer
+            charity_vector = np_vectors[idx]
+            similarity = cosine_similarity(self.vector, charity_vector)
+            self.bases[charity_id] = np.float32(similarity)
+
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
         if r == 0:
@@ -343,8 +356,8 @@ class User:
     #   Scheduling / Next
     # --------------------
     def refreshQueue(self):
-        user_query = self.getCompTags(self.chooseEvent())
-        user_vec = compute_query_vectory(user_query)
+        # Get the current user query vector (100-dimensional)
+        user_vec = self.getCompTags(event := self.chooseEvent())
         candidates = []
 
         np_ids = database.nonprofitFile["nonprofit_ids"][:]  # byte strings
@@ -355,8 +368,11 @@ class User:
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
                 continue
             vec = np_vectors[idx]
-            sim = cosine_similarity(user_vec, vec)
-            candidates.append((sim, charity_id))
+            if event == 0:
+                candidates.append((self.bases[idx], charity_id))
+            else:
+                sim = cosine_similarity(user_vec, vec)
+                candidates.append((sim, charity_id))
 
         if not candidates:
             self.seenSet.clear()
@@ -448,6 +464,7 @@ def cosine_similarity(vec1, vec2):
     dot_prod = np.dot(vec1, vec2)
     norm1 = np.linalg.norm(vec1)
     norm2 = np.linalg.norm(vec2)
+
     if norm1 == 0 or norm2 == 0:
         return 0.0
     return dot_prod / (norm1 * norm2)
@@ -456,8 +473,26 @@ def cosine_similarity(vec1, vec2):
 # -----------------
 #  Global Stores
 # -----------------
-# Use string IDs directly.
-OnlineUsers = {}
+OnlineUsers = {
+    # userID -> User object
+}
+
+NonprofitMap = BiMap("nonprofitMap.json")
+UserMap = BiMap("userMap.json")
+
+def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
+    match n:
+        case 0:
+            user.like(nonProfit)
+        case 1:
+            user.dislike(nonProfit)
+        case 2:
+            user.ignore(nonProfit)
+        case 3:
+            user.donate(nonProfit, amount)
+        case _:
+            raise Exception("Invalid Reaction")
+
 
 # ---------------------
 #  API Endpoints
