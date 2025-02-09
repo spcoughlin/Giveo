@@ -402,9 +402,13 @@ class User:
     # --------------------
     #   Scheduling / Next
     # --------------------
+
     def refreshQueue(self):
+        """
+        Refresh the upcomingQueue with new charity IDs.
+        If all charities have been seen, clear the seen-set so that charities may be repeated.
+        """
         # Get the current user query vector (100-dimensional)
-        # Note: first get the composed tag dict then compute the query vector.
         user_query = self.getCompTags(self.chooseEvent())
         user_vec = compute_query_vectory(user_query)
         candidates = []
@@ -413,18 +417,33 @@ class User:
         np_ids = database.nonprofitFile["nonprofit_ids"][:]  # stored as byte strings
         np_vectors = database.nonprofitFile["nonprofit_vectors"][:]  # shape (N, 100)
 
-        # Loop through every nonprofit in the file.
+        # First pass: Filter out charities already seen or queued.
         for idx, np_id in enumerate(np_ids):
-            # Convert id to string if needed
             charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
 
-            # Skip if this charity has already been seen or is already in the upcoming queue.
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
                 continue
 
             vec = np_vectors[idx]
             sim = cosine_similarity(user_vec, vec)
             candidates.append((sim, charity_id))
+
+        # If no candidates are found, assume the user has seen everything.
+        # Clear the seen history so charities can be re-queued.
+        if not candidates:
+            self.seenSet.clear()
+            self.seenQueue.clear()
+            # Re-run candidate selection without filtering on seenSet.
+            for idx, np_id in enumerate(np_ids):
+                charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
+
+                # We still avoid duplicates in upcomingQueue.
+                if charity_id in self.upcomingSet:
+                    continue
+
+                vec = np_vectors[idx]
+                sim = cosine_similarity(user_vec, vec)
+                candidates.append((sim, charity_id))
 
         # Sort candidates by similarity (highest first) and take the top 10.
         candidates.sort(key=lambda x: x[0], reverse=True)
@@ -434,15 +453,22 @@ class User:
             self.upcomingQueue.append(charity_id)
             self.upcomingSet.add(charity_id)
 
+
     def getNextN(self, n):
         """
-        Pop n items from upcomingQueue, return as JSON.
-        If the queue gets too small, refresh it.
+        Pop up to n items from upcomingQueue, return as a list.
+        If the queue is empty, try to refresh it.
         """
         sending = []
-        if len(self.upcomingSet) < n:
-            self.refreshQueue()
-        for _ in range(n):
+        while len(sending) < n:
+            # If the upcomingQueue is empty, try to refresh it.
+            if not self.upcomingQueue:
+                self.refreshQueue()
+                # If still empty after refresh, break out to avoid an infinite loop.
+                if not self.upcomingQueue:
+                    break
+    
+            # Now safely pop an item since the queue is not empty.
             charity = self.upcomingQueue.popleft()
             sending.append(charity)
             self.upcomingSet.remove(charity)
@@ -452,6 +478,7 @@ class User:
                 byebye = self.seenQueue.popleft()
                 self.seenSet.remove(byebye)
         return sending
+
 
     def getFullVector(self):
         return self.tags.getFullVector()
