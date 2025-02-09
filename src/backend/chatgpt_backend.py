@@ -35,9 +35,8 @@ Events = {
     5: "repeat"
 }
 
-f = open("tags.json", "r")
-Tags = json.load(f)
-f.close()
+with open("tags.json", "r") as f:
+    Tags = json.load(f)
 
 
 # -----------------
@@ -78,6 +77,7 @@ class BiMap:
                 data = json.load(f)
                 self.string_to_int = data.get("string_to_int", {})
                 self.int_to_string = {v: k for k, v in self.string_to_int.items()}
+                self.count = max(self.int_to_string.keys(), default=-1) + 1
         except FileNotFoundError:
             pass  # No file exists yet, start fresh
 
@@ -88,60 +88,80 @@ class Database:
         self.nonprofitFile = h5py.File(nonprofitFile, "a")
 
         self.ensureDatasets(self.userFile, "user")
-        self.ensureDatasets(self.userFile, "nonprofit")
+        # Make sure the nonprofit datasets go in the nonprofit file!
+        self.ensureDatasets(self.nonprofitFile, "nonprofit")
+
+    def _to_bytes(self, id_val):
+        """Ensure that IDs are stored as UTF-8–encoded bytes."""
+        if isinstance(id_val, str):
+            return id_val.encode("utf-8")
+        return id_val
 
     def ensureDatasets(self, file, name):
         if f"{name}_ids" not in file:
             file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S12")
             file.create_dataset(f"{name}_vectors", shape=(0, 100), maxshape=(None, 100), dtype=np.float32)
 
-    def addVector(self, file, name, id, vector):
+    def addVector(self, file, name, id_val, vector):
         ids = file[f"{name}_ids"]
         vectors = file[f"{name}_vectors"]
 
         size = ids.shape[0]
-
         ids.resize((size + 1,))
         vectors.resize((size + 1, 100))
 
-        ids[size] = id
+        ids[size] = self._to_bytes(id_val)
         vectors[size] = vector
 
-    def addUser(self, id, vector):
-        self.addVector(self.userFile, "user", id, vector)
+    def addUser(self, id_val, vector):
+        self.addVector(self.userFile, "user", id_val, vector)
 
-    def addNonprofit(self, id, vector):
-        self.addVector(self.nonprofitFile, "nonprofit", id, vector)
+    def addNonprofit(self, id_val, vector):
+        self.addVector(self.nonprofitFile, "nonprofit", id_val, vector)
 
-    def updateVector(self, file, name, id, newVector):
+    def updateVector(self, file, name, id_val, newVector):
+        id_bytes = self._to_bytes(id_val)
         ids = file[f"{name}_ids"][:]
         vectors = file[f"{name}_vectors"]
 
-        index = np.where(ids == id)[0]
-
+        index = np.where(ids == id_bytes)[0]
+        if index.size == 0:
+            raise ValueError(f"ID {id_val} not found in dataset {name}")
         vectors[index[0]] = newVector
 
-    def updateUserVector(self, id, newVector):
-        self.updateVector(self.userFile, "user", id, newVector)
+    def updateUserVector(self, id_val, newVector):
+        self.updateVector(self.userFile, "user", id_val, newVector)
 
-    def updateNonprofitVector(self, id, newVector):
-        self.updateVector(self.nonprofitFile, "nonprofit", id, newVector)
+    def updateNonprofitVector(self, id_val, newVector):
+        self.updateVector(self.nonprofitFile, "nonprofit", id_val, newVector)
 
-    def get(self, file, name, id):
+    def get(self, file, name, id_val):
+        id_bytes = self._to_bytes(id_val)
         ids = file[f"{name}_ids"][:]
         vectors = file[f"{name}_vectors"]
-        if id not in ids:
+        if id_bytes not in ids:
             return None
 
-        index = np.where(ids == id)[0]
-
+        index = np.where(ids == id_bytes)[0]
         return vectors[index[0]]
 
-    def getUser(self, id):
-        self.get(self.userFile, "user", id)
+    def getUser(self, id_val):
+        return self.get(self.userFile, "user", id_val)
 
-    def getNonprofit(self, id):
-        return self.get(self.nonprofitFile, "nonprofit", id)
+    def getNonprofitVector(self, id_val):
+        return self.get(self.nonprofitFile, "nonprofit", id_val)
+
+    def getNonprofit(self, id_val):
+        """
+        For reaction purposes, we query the MongoDB charities collection
+        and instantiate a NonProfit object.
+        """
+        doc = charitiesCollection.find_one({"_id": id_val})
+        if doc is None:
+            return None
+        primary = doc.get("primary", [])
+        secondary = doc.get("secondary", [])
+        return NonProfit(id_val, primary, secondary)
 
     def close(self):
         self.userFile.close()
@@ -150,10 +170,10 @@ class Database:
     def backup(self):
         self.userFile.close()
         self.nonprofitFile.close()
-        self.userFile = h5py.File(self.userFile, "a")
-        self.nonprofitFile = h5py.File(self.nonprofitFile, "a")
+        self.userFile = h5py.File(self.userFile.filename, "a")
+        self.nonprofitFile = h5py.File(self.nonprofitFile.filename, "a")
         self.ensureDatasets(self.userFile, "user")
-        self.ensureDatasets(self.userFile, "nonprofit")
+        self.ensureDatasets(self.nonprofitFile, "nonprofit")
 
 
 database: Database = Database("users.h5", "nonprofits.h5")
@@ -163,12 +183,12 @@ class UserTagTable:
     def __init__(self, userID, vector=None):
         self.sorted_list = SortedList()  # stored as (value, tag)
         self.zeroTags = deque()
-        if not vector:
-            self.data = {tag: .5 for tag in Tags}
+        if vector is None:
+            self.data = {int(tag): 0.5 for tag in Tags}  # assume Tags can be cast to int keys
         else:
             self.data = {}
             for i in range(len(vector)):
-                self.data[i] = vector[i]
+                self.data[i] = float(vector[i])
                 if vector[i] == 0:
                     self.zeroTags.append(i)
         # Initialize sorted_list
@@ -212,19 +232,22 @@ class UserTagTable:
     def swap(self, tag1, tag2):
         """Swap two tag values, used for certain 'disrupt' or 'return' events."""
         self.data[tag1], self.data[tag2] = self.data[tag2], self.data[tag1]
+        # Rebuild sorted_list (for simplicity)
+        self.sorted_list = SortedList(((v, t) for t, v in self.data.items()))
 
     def clone(self):
         """Deep copy this UserTagTable."""
         clone = UserTagTable(-1)
-        clone.data = deepcopy(self.data)  # Dont need deepcopy but :shrug:
+        clone.data = deepcopy(self.data)
         clone.sorted_list = SortedList(self.sorted_list)
         clone.zeroTags = deepcopy(self.zeroTags)
         return clone
 
     def getCompTags(self):
-        """Return top-20 tags (lowest indices in sorted_list) and their values."""
+        """Return top-20 tags (lowest values in sorted_list) and their values."""
         query = {}
-        for i in range(20):
+        # It is assumed that the sorted_list has at least 20 elements.
+        for i in range(min(20, len(self.sorted_list))):
             tag = self.getNthTag(i)
             query[tag] = self.getVal(tag)
         return query
@@ -237,9 +260,10 @@ class UserTagTable:
         for i in self.zeroTags:
             dictVersion[i] = 0.0
 
-        vec = np.zeros(total_tags)
+        vec = np.zeros(total_tags, dtype=np.float32)
         for tag, weight in dictVersion.items():
-            vec[tag] = weight
+            if tag < total_tags:
+                vec[tag] = weight
         return vec
 
     # ---------------
@@ -266,40 +290,42 @@ class UserTagTable:
 
     def ignore(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
-            val = self.getVal(tag) * 0.9
-            self.set(tag, val if val >= 0.0005 else 0)
+            new_val = self.getVal(tag) * 0.9
+            self.set(tag, new_val if new_val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
-            val = self.getVal(tag) * 0.99
-            self.set(tag, val if val >= 0.0005 else 0)
+            new_val = self.getVal(tag) * 0.99
+            self.set(tag, new_val if new_val >= 0.0005 else 0)
 
     def dislike(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
-            val = self.getVal(tag) * 0.75
-            self.set(tag, val if val >= 0.0005 else 0)
+            new_val = self.getVal(tag) * 0.75
+            self.set(tag, new_val if new_val >= 0.0005 else 0)
 
         for tag in nonprofit.tags["secondary"]:
-            val = self.getVal(tag) * 0.975
-            self.set(tag, val if val >= 0.0005 else 0)
+            new_val = self.getVal(tag) * 0.975
+            self.set(tag, new_val if new_val >= 0.0005 else 0)
 
 
 class NonProfit:
-    def __init__(self, id, primary, secondary):
-        self.id = id
+    def __init__(self, id_val, primary, secondary):
+        self.id = id_val
         self.tags = {"primary": primary, "secondary": secondary}
 
 
 class User:
-    def __init__(self, id, vector=None, new=False):
+    def __init__(self, id_val, vector=None, new=False):
         if new:
             # new user
-            self.id = id
+            self.id = id_val
             self.tags = UserTagTable(self.id)
+            # Compute and store the full query vector (from the top tags)
             self.vector = compute_query_vectory(self.tags.getCompTags())
-            UserMap.add(id)
+            UserMap.add(id_val)
         else:
-            self.id = id
-            self.tags = UserTagTable(self.id, vector=vector) if vector else UserTagTable(self.id)
+            self.id = id_val
+            # If a stored vector exists, build the tag table from it.
+            self.tags = UserTagTable(self.id, vector=vector) if vector is not None else UserTagTable(self.id)
 
         self.seenSet = set()
         self.seenQueue = deque()
@@ -312,20 +338,19 @@ class User:
             return 1
         if r == 1:
             return 2
-        if r in range(2, 75):
+        if 2 <= r < 75:
             return 0
-        if r in range(76, 85):
-            if -1 in self.tags:
+        if 76 <= r < 85:
+            # check for special tag -1 in the tag data
+            if -1 in self.tags.data:
                 return 3
             else:
                 return 0 if random.getrandbits(1) else 3
-        if r in range(86, 95):
-            return 4 if -2 in self.getCompTags(0) else 0
-        if r in range(96, 99):
-            if -3 in self.getCompTags(0):
-                return 5
-            else:
-                return 0 if random.getrandbits(1) else 5
+        if 86 <= r < 95:
+            return 4 if -2 in self.tags.data else 0
+        if 96 <= r < 99:
+            return 5 if -3 in self.tags.data else (0 if random.getrandbits(1) else 5)
+        return 0
 
     def getCompTags(self, event) -> dict:
         """
@@ -349,17 +374,13 @@ class User:
                     newTags.swap(newTags.getNthTag(0), zeroed_tag)
                 return newTags.getCompTags()
             case 3:
-                # gem (just a placeholder for searching only gem NPs, etc.)
+                # gem (placeholder for specialized nonprofit searches)
                 return self.tags.getCompTags()
             case 4:
                 # trending
                 return self.tags.getCompTags()
             case 5:
-                # repeat => pick from a random donation’s tags if available
-                # if len(self.donations) > 0:
-                #    np_ = self.donations[random.randint(0, len(self.donations) - 1)]
-                #    return np_.tags
-                # else:
+                # repeat – could pick from a random donation’s tags if available
                 return self.tags.getCompTags()
         return self.tags.getCompTags()
 
@@ -368,15 +389,9 @@ class User:
     # --------------------
     def like(self, nonprofit):
         self.tags.like(nonprofit)
-        # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
-        #                             -2: self.tags.getVal(-2),
-        #                             -3: self.tags.getVal(-3)})
 
     def donate(self, nonprofit, amount):
         self.tags.donate(nonprofit)
-        # nonprofit.updateDynamicTags({-1: self.tags.getVal(-1),
-        #                             -2: self.tags.getVal(-2),
-        #                             -3: self.tags.getVal(-3)})
 
     def ignore(self, nonprofit):
         self.tags.ignore(nonprofit)
@@ -389,24 +404,24 @@ class User:
     # --------------------
     def refreshQueue(self):
         # Get the current user query vector (100-dimensional)
-        user_vec = self.getCompTags(self.chooseEvent())
+        # Note: first get the composed tag dict then compute the query vector.
+        user_query = self.getCompTags(self.chooseEvent())
+        user_vec = compute_query_vectory(user_query)
         candidates = []
 
         # Retrieve all nonprofit IDs and vectors from the HDF5 file.
-        # (Assumes the nonprofits file has datasets named "nonprofit_ids" and "nonprofit_vectors")
-        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # e.g., an array of type S12 (byte strings)
+        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # stored as byte strings
         np_vectors = database.nonprofitFile["nonprofit_vectors"][:]  # shape (N, 100)
 
         # Loop through every nonprofit in the file.
         for idx, np_id in enumerate(np_ids):
-            # Convert id to string if needed (if stored as a byte string)
+            # Convert id to string if needed
             charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
 
             # Skip if this charity has already been seen or is already in the upcoming queue.
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
                 continue
 
-            # Get the nonprofit’s stored vector and compute cosine similarity.
             vec = np_vectors[idx]
             sim = cosine_similarity(user_vec, vec)
             candidates.append((sim, charity_id))
@@ -415,10 +430,6 @@ class User:
         candidates.sort(key=lambda x: x[0], reverse=True)
         top_ten = candidates[:10]
 
-        # For each selected candidate, re-create the NonProfit object.
-        # We “recover” the primary and secondary tag lists by checking which indices in the vector
-        # have a value of 10 (primary) or 1 (secondary). This assumes the nonprofit vector was generated
-        # using compute_nonprofit_vector.
         for sim, charity_id in top_ten:
             self.upcomingQueue.append(charity_id)
             self.upcomingSet.add(charity_id)
@@ -432,10 +443,11 @@ class User:
         if len(self.upcomingSet) < n:
             self.refreshQueue()
         for _ in range(n):
-            sending.append(NP := self.upcomingQueue.popleft())
-            self.upcomingSet.remove(NP)
-            self.seenQueue.append(NP)
-            self.seenSet.add(NP)
+            charity = self.upcomingQueue.popleft()
+            sending.append(charity)
+            self.upcomingSet.remove(charity)
+            self.seenQueue.append(charity)
+            self.seenSet.add(charity)
             if len(self.seenQueue) > 50:
                 byebye = self.seenQueue.popleft()
                 self.seenSet.remove(byebye)
@@ -444,49 +456,54 @@ class User:
     def getFullVector(self):
         return self.tags.getFullVector()
 
+
 def userIDstringToInt(userID: str):
     return UserMap.get_int(userID)
 
+
 def charityIDstringToInt(charityID: str):
     return NonprofitMap.get_int(charityID)
+
 
 # -----------------
 #   Vector Stuff
 # -----------------
 def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
     """
-    Build a 100-dimensional vector for a nonprofit
+    Build a 100-dimensional vector for a nonprofit.
     """
-    vec = np.zeros(total_tags)
+    vec = np.zeros(total_tags, dtype=np.float32)
 
     for tag in nonprofit.get("primary", []):
-        vec[tag] = 10
+        if tag < total_tags:
+            vec[tag] = 10
 
     for tag in nonprofit.get("secondary", []):
-        vec[tag] = 1
+        if tag < total_tags:
+            vec[tag] = 1
 
     return vec
 
 
 def compute_query_vectory(query, total_tags=100):
     """
-    Build a 100-dimensional vector for a query
-    (only top ~20 tags are included, but we allocate 100 slots).
+    Build a 100-dimensional vector for a query.
+    (Only top ~20 tags are included, but we allocate 100 slots.)
     """
-    vec = np.zeros(total_tags)
+    vec = np.zeros(total_tags, dtype=np.float32)
     for tag, weight in query.items():
-        vec[tag] = weight
+        if tag < total_tags:
+            vec[tag] = weight
     return vec
 
 
 def cosine_similarity(vec1, vec2):
     """
-    Compute cosine similarity between two vectors
+    Compute cosine similarity between two vectors.
     """
     dot_prod = np.dot(vec1, vec2)
     norm1 = np.linalg.norm(vec1)
     norm2 = np.linalg.norm(vec2)
-
     if norm1 == 0 or norm2 == 0:
         return 0.0
     return dot_prod / (norm1 * norm2)
@@ -496,11 +513,12 @@ def cosine_similarity(vec1, vec2):
 #  Global Stores
 # -----------------
 OnlineUsers = {
-    # userID -> User object
+    # userID (as int from UserMap) -> User object
 }
 
 NonprofitMap = BiMap("nonprofitMap.json")
 UserMap = BiMap("userMap.json")
+
 
 def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
     match n:
@@ -517,47 +535,61 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 
 
 # ---------------------
-#  API
+#  API Endpoints
 # ---------------------
 
 @app.get("/nextN")
 def nextCharity(userID: str, n: int = 3):
-    if userID not in OnlineUsers:
+    user_key = userIDstringToInt(userID)
+    if user_key is None or user_key not in OnlineUsers:
         return PlainTextResponse("FAIL: User not online")
-    return {"array": OnlineUsers[userIDstringToInt(userID)].getNextN(n)}
+    return {"array": OnlineUsers[user_key].getNextN(n)}
 
 
 @app.post("/reaction")
 def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.0):
-    if userIDstringToInt(userID) not in OnlineUsers:
+    user_key = userIDstringToInt(userID)
+    if user_key is None or user_key not in OnlineUsers:
         return PlainTextResponse("FAIL: User not online")
 
     if reactionNum > 3 or reactionNum < 0:
         return PlainTextResponse("FAIL: Invalid reaction number")
 
-    user = OnlineUsers[userIDstringToInt(userID)]
-    if reactionNum == 3:
-        react(3, user, database.getNonprofit(nonprofitID), amount)
+    user = OnlineUsers[user_key]
+    nonprofit = database.getNonprofit(nonprofitID)
+    if nonprofit is None:
+        return PlainTextResponse("FAIL: Nonprofit not found")
 
+    if reactionNum == 3:
+        react(3, user, nonprofit, amount)
     else:
-        react(reactionNum, user, database.getNonprofit(nonprofitID))
+        react(reactionNum, user, nonprofit)
 
     return PlainTextResponse("success")
 
 
 @app.post("/logOn")
 def logOn(userID: str):
-    # Pull User class data from db and construct a User Object
-    user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID, new=True)
-    OnlineUsers[userIDstringToInt(userID)] = user
+    # Try to pull the stored vector from the HDF5 file.
+    vector = database.getUser(userID)
+    if vector is not None:
+        user = User(userID, vector=vector)
+    else:
+        user = User(userID, new=True)
+    # Store user in OnlineUsers keyed by the integer from our UserMap.
+    user_key = userIDstringToInt(userID)
+    OnlineUsers[user_key] = user
     return PlainTextResponse("success")
 
 
 @app.post("/logOff")
 def logOut(userID: str):
-    # Remove User class, update tags in big (bug) db
-    database.updateUserVector(userID, OnlineUsers[userID].getFullVector())
-    del OnlineUsers[userID]
+    user_key = userIDstringToInt(userID)
+    if user_key not in OnlineUsers:
+        return PlainTextResponse("FAIL: User not online")
+    # Update the user vector in the HDF5 file before logging off.
+    database.updateUserVector(userID, OnlineUsers[user_key].getFullVector())
+    del OnlineUsers[user_key]
     return PlainTextResponse("success")
 
 
@@ -568,7 +600,7 @@ lastUpdate = time.time()
 def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[int]):
     updateQueue.append(nonprofitID)
     if time.time() - lastUpdate > 7200:
-        #updateCharityTags()
+        # updateCharityTags()  # (Placeholder for periodic update logic)
         pass
     return PlainTextResponse("success")
 
@@ -597,3 +629,4 @@ def exit():
     database.close()
     NonprofitMap.save()
     UserMap.save()
+
