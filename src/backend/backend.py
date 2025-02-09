@@ -474,14 +474,14 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 # ---------------------
 
 @app.get("/nextN")
-def nextCharity(userID: int, n: int = 3):
+def nextCharity(userID: str, n: int = 3):
     if userID not in OnlineUsers:
         return
     return {"array": OnlineUsers[userID].getNextN(n)}
 
 
 @app.post("/reaction")
-def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.0):
+def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.0):
     if userID not in OnlineUsers:
         return PlainTextResponse("FAIL: User not online")
 
@@ -499,7 +499,7 @@ def reaction(userID: int, reactionNum: int, nonprofitID: int, amount: float = 0.
 
 
 @app.post("/logOn")
-def logOn(userID: int):
+def logOn(userID: str):
     # Pull User class data from db and construct a User Object
     user = User(userID, vector=v) if (v := database.getUser(id)) else User(userID)
     OnlineUsers[userID] = user
@@ -507,7 +507,7 @@ def logOn(userID: int):
 
 
 @app.post("/logOff")
-def logOut(userID: int):
+def logOut(userID: str):
     # Remove User class, update tags in big (bug) db
     database.updateUserVector(userID, OnlineUsers[userID].getFullVector())
     del OnlineUsers[userID]
@@ -515,7 +515,7 @@ def logOut(userID: int):
 
 
 @app.post("/queueUpdate")
-def queueUpdate(nonprofitID: int):
+def queueUpdate(nonprofitID: str):
     updateQueue.append(nonprofitID)
     return PlainTextResponse("success")
 
