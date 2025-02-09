@@ -573,7 +573,7 @@ def nextCharity(userID: str, n: int = 3):
     return {"array": OnlineUsers[user_key].getNextN(n)}
 
 
-@app.post("/reaction")
+@app.get("/reaction")
 def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.0):
     user_key = userIDstringToInt(userID)
     if user_key is None or user_key not in OnlineUsers:
@@ -595,7 +595,7 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
     return PlainTextResponse("success")
 
 
-@app.post("/logOn")
+@app.get("/logOn")
 def logOn(userID: str):
     # Try to pull the stored vector from the HDF5 file.
     vector = database.getUser(userID)
@@ -609,7 +609,7 @@ def logOn(userID: str):
     return PlainTextResponse("success")
 
 
-@app.post("/logOff")
+@app.get("/logOff")
 def logOut(userID: str):
     user_key = userIDstringToInt(userID)
     if user_key not in OnlineUsers:
@@ -623,7 +623,7 @@ def logOut(userID: str):
 lastUpdate = time.time()
 
 
-@app.post("/queueUpdate")
+@app.get("/queueUpdate")
 def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[int]):
     updateQueue.append(nonprofitID)
     if time.time() - lastUpdate > 7200:
