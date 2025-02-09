@@ -503,6 +503,10 @@ def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[in
 def test():
     return {"message": "Hello World"}
 
+@app.get("/isLoggedIn")
+def isLoggedIn(userID):
+    return PlainTextResponse("True" if userID in OnlineUsers else "False")
+
 # -----------------
 #   Main Methods
 # -----------------
