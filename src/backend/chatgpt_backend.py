@@ -15,9 +15,6 @@ import h5py
 # -----------------
 #    Global Data
 # -----------------
-cloudDB = client["SwipeApp"]
-charitiesCollection = cloudDB["Charities"]
-
 app = FastAPI()
 
 updateQueue = deque()
