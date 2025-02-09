@@ -1,6 +1,6 @@
 # Giveo
 
-# Giveo - Swipe. Match. Donate.
+# Giveo - Swipe. Give. Repeat.
 
 Giveo is an innovative hackathon project built for **HackNYU2025**. The app reimagines charitable giving by letting you swipe through a curated selection of charities and matching you with those that align with your personal preferences. Whether you're looking to support education, healthcare, the environment, or any other cause, Giveo makes donating easy and engaging.
 
@@ -42,20 +42,18 @@ Giveo is an innovative hackathon project built for **HackNYU2025**. The app reim
 
 2. **Swipe Through Charities:**
 
-   - **Swipe Right:** Indicate interest in a charity.
-   - **Swipe Left:** Pass on a charity.
    - Your swiping behavior helps the app curate and match charities that best align with your interests.
 
 3. **Donate:**
 
-   Once matched with a charity, proceed to donate directly through the app using our integrated donation process.
+   Once matched with a charity, proceed to donate through the app.
 
 ---
 
 ## Acknowledgements
 
 - **HackNYU2025:** A huge thank you to the organizers of HackNYU2025 for providing a platform to innovate.
-- **Our Team:** [List team member names or GitHub handles]
+- **Our Team:** Sean Coughlin, Tal Ledeniov, Quinn Savitt, Alec Agayan
 - **Open Source Community:** Special thanks to the developers behind FastAPI, Swift, and all the libraries and tools used in this project.
 
 ---
