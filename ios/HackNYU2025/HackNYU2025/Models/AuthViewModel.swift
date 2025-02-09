@@ -2,7 +2,7 @@
 //  AuthViewModel.swift
 //  HackNYU2025
 //
-//  Created by Alec Agayan on 2/8/25.
+//  Created by Alec Agayan on 2/9/25
 //
 
 import SwiftUI
@@ -14,32 +14,70 @@ class AuthViewModel: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var errorMessage: String? = nil
     
-//    var charitiesManager: CharitiesManager?
-//    var savedManager: SavedCharitiesManager?
+    var charitiesManager: CharitiesManager?
+    var savedManager: SavedCharitiesManager?
     
     private let db = Firestore.firestore()
     
+    // Set your API base URL (adjust as needed)
+    private let apiBaseURL = "http://52.70.58.148" // Replace with your API base URL
+
     init() {
-        // Listen to authentication state changes
+        // Listen to authentication state changes.
+        // You can call logOn here if a user is already authenticated.
         Auth.auth().addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 self?.isAuthenticated = user != nil
                 self?.errorMessage = nil
+                if let user = user {
+                    self?.logOnToAPI(userID: user.uid)
+                }
             }
         }
     }
     
+    // MARK: - API Call Helper
+    
+    /// Calls the /logOn endpoint, passing in the authenticated user's id.
+    private func logOnToAPI(userID: String) {
+        // Construct the URL with the userID query parameter.
+        guard let url = URL(string: "\(apiBaseURL)/logOn?userID=\(userID)") else {
+            print("Invalid logOn URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Send the request.
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error calling logOn API: \(error.localizedDescription)")
+                return
+            }
+            if let httpResponse = response as? HTTPURLResponse {
+                print("logOn API response status: \(httpResponse.statusCode)")
+            }
+            // Optionally, you can parse `data` if your endpoint returns JSON.
+        }.resume()
+    }
+    
+    // MARK: - Authentication Methods
+
     /// Sign In Method
     func signIn(email: String, password: String) {
         self.errorMessage = nil
-        Auth.auth().signIn(withEmail: email, password: password) { [weak self] _, error in
+        Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error {
                     self.errorMessage = error.localizedDescription
                     self.isAuthenticated = false
-                } else {
+                } else if let user = result?.user {
                     self.isAuthenticated = true
+                    // On successful sign in, call the logOn API with the user id.
+                    self.logOnToAPI(userID: user.uid)
+                    print("CALLING LOG ON")
                 }
             }
         }
@@ -64,7 +102,7 @@ class AuthViewModel: ObservableObject {
                     return
                 }
                 
-                // Create a new user record in Firestore
+                // Create a new user record in Firestore.
                 let newUser = User(
                     id: user.uid,
                     name: name,
@@ -80,6 +118,8 @@ class AuthViewModel: ObservableObject {
                             self.isAuthenticated = false
                         } else {
                             self.isAuthenticated = true
+                            // On successful sign up, call the logOn API with the user id.
+                            self.logOnToAPI(userID: user.uid)
                         }
                     }
                 } catch let encodingError {
@@ -102,6 +142,9 @@ class AuthViewModel: ObservableObject {
             // Reset per-user managers.
             charitiesManager?.reset()
             savedManager?.reset()
+            
+            // Optionally, you could also call a logOff endpoint here.
+            // self.logOffFromAPI(userID: currentUserId)
         } catch {
             self.errorMessage = error.localizedDescription
         }
@@ -109,14 +152,16 @@ class AuthViewModel: ObservableObject {
     
     /// (Optional) For Apple Sign-In, etc.
     func signInWithApple(credential: AuthCredential) {
-        Auth.auth().signIn(with: credential) { [weak self] _, error in
+        Auth.auth().signIn(with: credential) { [weak self] result, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error {
                     self.errorMessage = error.localizedDescription
                     self.isAuthenticated = false
-                } else {
+                } else if let user = result?.user {
                     self.isAuthenticated = true
+                    // Call logOn after successful Apple sign-in.
+                    self.logOnToAPI(userID: user.uid)
                 }
             }
         }

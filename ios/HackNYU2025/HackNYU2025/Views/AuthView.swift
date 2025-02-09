@@ -2,7 +2,7 @@
 //  AuthView.swift
 //  HackNYU2025
 //
-//  Created by Alec Agayan on 2/8/25.
+//  Created by Alec Agayan on 2/9/25
 //
 
 import SwiftUI
