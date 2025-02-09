@@ -146,14 +146,12 @@ class Database:
 
     def getNonprofit(self, id_val):
         """
-        For reaction purposes, we query the MongoDB charities collection
-        and instantiate a NonProfit object.
+        Retrieve the nonprofit vector from the local HDF5 file and recover its primary and secondary tags.
         """
-        doc = charitiesCollection.find_one({"_id": id_val})
-        if doc is None:
+        vector = self.getNonprofitVector(id_val)
+        if vector is None:
             return None
-        primary = doc.get("primary", [])
-        secondary = doc.get("secondary", [])
+        primary, secondary = recover_nonprofit_tags(vector)
         return NonProfit(id_val, primary, secondary)
 
     def close(self):
@@ -410,7 +408,6 @@ class User:
     # --------------------
     #   Scheduling / Next
     # --------------------
-
     def refreshQueue(self):
         """
         Refresh the upcomingQueue with new charity IDs.
@@ -461,7 +458,6 @@ class User:
             self.upcomingQueue.append(charity_id)
             self.upcomingSet.add(charity_id)
 
-
     def getNextN(self, n):
         """
         Pop up to n items from upcomingQueue, return as a list.
@@ -487,7 +483,6 @@ class User:
                 self.seenSet.remove(byebye)
         return sending
 
-
     def getFullVector(self):
         return self.tags.getFullVector()
 
@@ -501,6 +496,24 @@ def charityIDstringToInt(charityID: str):
 
 
 # -----------------
+#   Helper Functions
+# -----------------
+def recover_nonprofit_tags(vector):
+    """
+    Recover the primary and secondary tags from a nonprofit vector.
+    We assume that a value of 10 indicates a primary tag and a value of 1 indicates a secondary tag.
+    """
+    primary = []
+    secondary = []
+    for i, val in enumerate(vector):
+        if np.isclose(val, 10.0):
+            primary.append(i)
+        elif np.isclose(val, 1.0):
+            secondary.append(i)
+    return primary, secondary
+
+
+# -----------------
 #   Vector Stuff
 # -----------------
 def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
@@ -508,15 +521,12 @@ def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
     Build a 100-dimensional vector for a nonprofit.
     """
     vec = np.zeros(total_tags, dtype=np.float32)
-
     for tag in nonprofit.get("primary", []):
         if tag < total_tags:
             vec[tag] = 10
-
     for tag in nonprofit.get("secondary", []):
         if tag < total_tags:
             vec[tag] = 1
-
     return vec
 
 
