@@ -519,6 +519,10 @@ def queueUpdate(nonprofitID: int):
     updateQueue.append(nonprofitID)
     return PlainTextResponse("success")
 
+@app.get("/test")
+def test():
+    return {"message": "Hello World"}
+
 
 # Main Methods
 def run():
