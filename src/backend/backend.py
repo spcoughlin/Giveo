@@ -1,5 +1,3 @@
-import base64
-import json
 import random
 from collections import deque
 from copy import deepcopy
