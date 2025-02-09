@@ -7,6 +7,7 @@ import os
 
 # Third-party packages
 import numpy as np
+import sortedcontainers
 from sortedcontainers import SortedList
 from pymongo import MongoClient
 from fastapi import FastAPI
@@ -273,7 +274,6 @@ class User:
         self.upcomingSet = set()
         self.upcomingQueue = deque()
 
-
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
         if r == 0:
@@ -356,7 +356,7 @@ class User:
     #   Scheduling / Next
     # --------------------
     async def refreshQueue(self):
-        pass
+        topTen = sortedcontainers.SortedSet()
 
     def getNextN(self, n):
         """
