@@ -2,6 +2,7 @@ import random
 import time
 from collections import deque
 from copy import deepcopy
+import os
 import json
 
 # Third-party packages
@@ -14,9 +15,7 @@ import h5py
 # -----------------
 #    Global Data
 # -----------------
-
 app = FastAPI()
-
 updateQueue = deque()
 
 Events = {
@@ -33,18 +32,13 @@ with open("tags.json", "r") as f:
 
 
 # -----------------
-#     Classes
+#     Database Class
 # -----------------
-# (The BiMap class is no longer needed since we are using string IDs directly.)
-# If you no longer require it anywhere else, you can remove it.
-
 class Database:
     def __init__(self, userFile, nonprofitFile):
         self.userFile = h5py.File(userFile, "a")
         self.nonprofitFile = h5py.File(nonprofitFile, "a")
-
         self.ensureDatasets(self.userFile, "user")
-        # Make sure the nonprofit datasets go in the nonprofit file!
         self.ensureDatasets(self.nonprofitFile, "nonprofit")
 
     def _to_bytes(self, id_val):
@@ -54,19 +48,17 @@ class Database:
         return id_val
 
     def ensureDatasets(self, file, name):
+        # Increase dtype length to 50 to store Firebase IDs
         if f"{name}_ids" not in file:
             file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S50")
-            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype=int)
             file.create_dataset(f"{name}_vectors", shape=(0, 100), maxshape=(None, 100), dtype=np.float32)
 
     def addVector(self, file, name, id_val, vector):
         ids = file[f"{name}_ids"]
         vectors = file[f"{name}_vectors"]
-
         size = ids.shape[0]
         ids.resize((size + 1,))
         vectors.resize((size + 1, 100))
-
         ids[size] = self._to_bytes(id_val)
         vectors[size] = vector
 
@@ -80,7 +72,6 @@ class Database:
         id_bytes = self._to_bytes(id_val)
         ids = file[f"{name}_ids"][:]
         vectors = file[f"{name}_vectors"]
-
         index = np.where(ids == id_bytes)[0]
         if index.size == 0:
             raise ValueError(f"ID {id_val} not found in dataset {name}")
@@ -98,7 +89,6 @@ class Database:
         vectors = file[f"{name}_vectors"]
         if id_bytes not in ids:
             return None
-
         index = np.where(ids == id_bytes)[0]
         return vectors[index[0]]
 
@@ -134,6 +124,9 @@ class Database:
 database: Database = Database("users.h5", "nonprofits.h5")
 
 
+# -----------------
+#   UserTagTable Class
+# -----------------
 class UserTagTable:
     def __init__(self, userID, vector=None):
         self.sorted_list = SortedList()  # stored as (value, tag)
@@ -146,12 +139,10 @@ class UserTagTable:
                 self.data[i] = float(vector[i])
                 if vector[i] == 0:
                     self.zeroTags.append(i)
-        # Initialize sorted_list
         for tag, val in self.data.items():
             self.sorted_list.add((val, tag))
 
     def set(self, tag, val):
-        # Remove any old value from the sorted list if present.
         if tag in self.data:
             old_val = self.data[tag]
             try:
@@ -160,15 +151,12 @@ class UserTagTable:
                 pass
         self.data[tag] = val
         self.sorted_list.add((val, tag))
-
         if val == 0:
             self.zeroTags.append(tag)
             try:
                 self.sorted_list.remove((val, tag))
             except ValueError:
                 pass
-
-        # Process the zeroTags queue iteratively.
         while len(self.zeroTags) > 25:
             bumped_tag = self.zeroTags.popleft()
             if bumped_tag in self.data:
@@ -219,16 +207,13 @@ class UserTagTable:
             dictVersion[tag] = self.getVal(tag)
         for i in self.zeroTags:
             dictVersion[i] = 0.0
-
         vec = np.zeros(total_tags, dtype=np.float32)
         for tag, weight in dictVersion.items():
             if tag < total_tags:
                 vec[tag] = weight
         return vec
 
-    # ---------------
-    #    Behaviors
-    # ---------------
+    # Behaviors
     def like(self, nonprofit):
         for tag in nonprofit.tags["primary"]:
             val = self.getVal(tag)
@@ -262,15 +247,21 @@ class UserTagTable:
             self.set(tag, new_val if new_val >= 0.0005 else 0)
 
 
+# -----------------
+#   NonProfit Class
+# -----------------
 class NonProfit:
     def __init__(self, id_val, primary, secondary):
         self.id = id_val
         self.tags = {"primary": primary, "secondary": secondary}
 
 
+# -----------------
+#   User Class
+# -----------------
+# The User class now uses the provided string ID directly.
 class User:
     def __init__(self, id_val, vector=None, new=False):
-        # Use the API-provided ID directly (a string).
         self.id = id_val
         if new:
             self.tags = UserTagTable(self.id)
@@ -281,17 +272,6 @@ class User:
         self.seenQueue = deque()
         self.upcomingSet = set()
         self.upcomingQueue = deque()
-
-        self.bases = {}
-
-        np_ids = database.nonprofitFile["nonprofit_ids"][:]
-        np_vectors = database.nonprofitFile["nonprofit_vectors"][:]
-
-        for idx, np_id in enumerate(np_ids):
-            charity_id = int(np_id)  # Ensure ID is stored as an integer
-            charity_vector = np_vectors[idx]
-            similarity = cosine_similarity(self.vector, charity_vector)
-            self.bases[charity_id] = np.float32(similarity)
 
     def chooseEvent(self) -> int:
         r = random.randint(0, 99)
@@ -336,9 +316,7 @@ class User:
                 return self.tags.getCompTags()
         return self.tags.getCompTags()
 
-    # --------------------
-    #   Reaction methods
-    # --------------------
+    # Reaction methods
     def like(self, nonprofit):
         self.tags.like(nonprofit)
 
@@ -351,28 +329,20 @@ class User:
     def dislike(self, nonprofit):
         self.tags.dislike(nonprofit)
 
-    # --------------------
-    #   Scheduling / Next
-    # --------------------
+    # Scheduling / Next
     def refreshQueue(self):
-        # Get the current user query vector (100-dimensional)
-        user_vec = self.getCompTags(event := self.chooseEvent())
+        user_query = self.getCompTags(self.chooseEvent())
+        user_vec = compute_query_vectory(user_query)
         candidates = []
-
-        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # byte strings
+        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # stored as byte strings
         np_vectors = database.nonprofitFile["nonprofit_vectors"][:]  # shape (N, 100)
-
         for idx, np_id in enumerate(np_ids):
             charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
                 continue
             vec = np_vectors[idx]
-            if event == 0:
-                candidates.append((self.bases[idx], charity_id))
-            else:
-                sim = cosine_similarity(user_vec, vec)
-                candidates.append((sim, charity_id))
-
+            sim = cosine_similarity(user_vec, vec)
+            candidates.append((sim, charity_id))
         if not candidates:
             self.seenSet.clear()
             self.seenQueue.clear()
@@ -383,7 +353,6 @@ class User:
                 vec = np_vectors[idx]
                 sim = cosine_similarity(user_vec, vec)
                 candidates.append((sim, charity_id))
-
         candidates.sort(key=lambda x: x[0], reverse=True)
         top_ten = candidates[:10]
         for sim, charity_id in top_ten:
@@ -425,6 +394,44 @@ def recover_nonprofit_tags(vector):
     return primary, secondary
 
 
+# -----------------
+#   Vector Functions
+# -----------------
+def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
+    vec = np.zeros(total_tags, dtype=np.float32)
+    for tag in nonprofit.get("primary", []):
+        if tag < total_tags:
+            vec[tag] = 10
+    for tag in nonprofit.get("secondary", []):
+        if tag < total_tags:
+            vec[tag] = 1
+    return vec
+
+def compute_query_vectory(query, total_tags=100):
+    vec = np.zeros(total_tags, dtype=np.float32)
+    for tag, weight in query.items():
+        if tag < total_tags:
+            vec[tag] = weight
+    return vec
+
+def cosine_similarity(vec1, vec2):
+    dot_prod = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return dot_prod / (norm1 * norm2)
+
+
+# -----------------
+#  Global Stores
+# -----------------
+# Use string IDs directly.
+OnlineUsers = {}
+
+# -----------------
+#   Reaction Function
+# -----------------
 def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
     match n:
         case 0:
@@ -439,55 +446,14 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
             raise Exception("Invalid Reaction")
 
 
-# -----------------
-#   Vector Stuff
-# -----------------
-def compute_nonprofit_vector(nonprofit: dict, total_tags=100):
-    vec = np.zeros(total_tags, dtype=np.float32)
-    for tag in nonprofit.get("primary", []):
-        if tag < total_tags:
-            vec[tag] = 10
-    for tag in nonprofit.get("secondary", []):
-        if tag < total_tags:
-            vec[tag] = 1
-    return vec
-
-
-def compute_query_vectory(query, total_tags=100):
-    vec = np.zeros(total_tags, dtype=np.float32)
-    for tag, weight in query.items():
-        if tag < total_tags:
-            vec[tag] = weight
-    return vec
-
-
-def cosine_similarity(vec1, vec2):
-    dot_prod = np.dot(vec1, vec2)
-    norm1 = np.linalg.norm(vec1)
-    norm2 = np.linalg.norm(vec2)
-
-    if norm1 == 0 or norm2 == 0:
-        return 0.0
-    return dot_prod / (norm1 * norm2)
-
-
-# -----------------
-#  Global Stores
-# -----------------
-OnlineUsers = {
-    # userID -> User object
-}
-
-
 # ---------------------
-#  API Endpoints
+#   API Endpoints
 # ---------------------
 @app.get("/nextN")
 def nextCharity(userID: str, n: int = 3):
     if userID not in OnlineUsers:
         return PlainTextResponse("FAIL: User not online")
     return {"array": OnlineUsers[userID].getNextN(n)}
-
 
 @app.get("/reaction")
 def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.0):
@@ -505,7 +471,6 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
         react(reactionNum, user, nonprofit)
     return PlainTextResponse("success")
 
-
 @app.get("/logOn")
 def logOn(userID: str):
     vector = database.getUser(userID)
@@ -516,7 +481,6 @@ def logOn(userID: str):
     OnlineUsers[userID] = user
     return PlainTextResponse("success")
 
-
 @app.get("/logOff")
 def logOut(userID: str):
     if userID not in OnlineUsers:
@@ -525,9 +489,7 @@ def logOut(userID: str):
     del OnlineUsers[userID]
     return PlainTextResponse("success")
 
-
 lastUpdate = time.time()
-
 
 @app.get("/queueUpdate")
 def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[int]):
@@ -537,19 +499,17 @@ def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[in
         pass
     return PlainTextResponse("success")
 
-
 @app.get("/test")
 def test():
     return {"message": "Hello World"}
 
-
-# Main Methods
+# -----------------
+#   Main Methods
+# -----------------
 def run():
     global database
     database = Database("users.h5", "nonprofits.h5")
-    # If any mapping files exist, they can be loaded here if needed.
 
-
-def exitApp():
+def exit():
     database.close()
-    # Save any state if needed.
+
