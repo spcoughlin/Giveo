@@ -2,6 +2,7 @@ import random
 from collections import deque
 from copy import deepcopy
 import os
+import json
 
 # Third-party packages
 import numpy as np
@@ -25,12 +26,6 @@ app = FastAPI()
 
 updateQueue = deque()
 
-Tags = {
-    -1: "gem",
-    -2: "trending",
-    -3: "repeat"
-}
-
 Events = {
     0: "basic",
     1: "disrupt",
@@ -40,10 +35,9 @@ Events = {
     5: "repeat"
 }
 
-with open("tags.txt", "r") as f:
-    for line in f:
-        temp = line.split(" : ")
-        Tags[int(temp[0])] = temp[1]
+f = open("tags.json", "r")
+Tags = json.load(f)
+f.close()
 
 
 # -----------------
@@ -322,11 +316,11 @@ class User:
                 return self.tags.getCompTags()
             case 5:
                 # repeat => pick from a random donation’s tags if available
-                if len(self.donations) > 0:
-                    np_ = self.donations[random.randint(0, len(self.donations) - 1)]
-                    return np_.tags
-                else:
-                    return self.tags.getCompTags()
+                # if len(self.donations) > 0:
+                #    np_ = self.donations[random.randint(0, len(self.donations) - 1)]
+                #    return np_.tags
+                # else:
+                return self.tags.getCompTags()
         return self.tags.getCompTags()
 
     # --------------------
