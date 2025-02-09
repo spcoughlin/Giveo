@@ -1,4 +1,5 @@
 import random
+import time
 from collections import deque
 from copy import deepcopy
 import os
@@ -6,7 +7,6 @@ import json
 
 # Third-party packages
 import numpy as np
-import sortedcontainers
 from sortedcontainers import SortedList
 from pymongo import MongoClient
 from fastapi import FastAPI
@@ -476,7 +476,7 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
 @app.get("/nextN")
 def nextCharity(userID: str, n: int = 3):
     if userID not in OnlineUsers:
-        return
+        return PlainTextResponse("FAIL: User not online")
     return {"array": OnlineUsers[userID].getNextN(n)}
 
 
@@ -514,15 +514,28 @@ def logOut(userID: str):
     return PlainTextResponse("success")
 
 
+lastUpdate = time.time()
+
+
 @app.post("/queueUpdate")
-def queueUpdate(nonprofitID: str):
+def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[int]):
     updateQueue.append(nonprofitID)
+    if time.time() - lastUpdate > 7200:
+        #updateCharityTags()
+        pass
     return PlainTextResponse("success")
+
 
 @app.get("/test")
 def test():
     return {"message": "Hello World"}
 
+
+# def updateCharityTags():
+#    while updateQueue:
+#        on = updateQueue.popleft()
+#        database.updateNonprofitVector(on)
+#        break
 
 # Main Methods
 def run():
