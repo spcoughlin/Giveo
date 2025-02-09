@@ -409,6 +409,18 @@ def recover_nonprofit_tags(vector):
             secondary.append(i)
     return primary, secondary
 
+def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
+    match n:
+        case 0:
+            user.like(nonProfit)
+        case 1:
+            user.dislike(nonProfit)
+        case 2:
+            user.ignore(nonProfit)
+        case 3:
+            user.donate(nonProfit, amount)
+        case _:
+            raise Exception("Invalid Reaction")
 
 # -----------------
 #   Vector Stuff
