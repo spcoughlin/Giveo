@@ -6,10 +6,28 @@
     <title>Giveo - Swipe. Give. Repeat.</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="logo_red.png" type="image/png">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute("href").substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop,
+                            behavior: "smooth"
+                        });
+                    }
+                });
+            });
+        });
+    </script>
     <style>
         :root {
             --primary-color: #FE3437;
             --secondary-color: #F7F2ED;
+            --block-color: #4E342E;
             --background-color: #FFFFFB;
             --text-color: #3B3333;
         }
@@ -30,7 +48,7 @@
         </div>
     </header>
     
-    <section class="text-center py-20 bg-[var(--primary-color)] text-[var(--background-color)]">
+    <section class="text-center py-20 bg-[var(--block-color)] text-[var(--background-color)]">
         <blockquote class="italic text-lg">“Success isn’t about how much money you make. It’s about the difference you make in people’s lives.”<br>— Michelle Obama</blockquote>
         <h2 class="text-4xl font-extrabold mt-6">Swipe. Give. Repeat.</h2>
         <p class="mt-4 text-lg">Discover charities based on your passions and make giving a habit, not an obligation.</p>
@@ -58,7 +76,7 @@
         </div>
     </section>
     
-    <section id="get-started" class="bg-[var(--primary-color)] text-[var(--background-color)] py-16 text-center">
+    <section id="get-started" class="bg-[var(--block-color)] text-[var(--background-color)] py-16 text-center">
         <h3 class="text-3xl font-bold">Start Giving Today</h3>
         <p class="mt-4">Join Giveo and make giving back part of your lifestyle.</p>
         <div class="mt-6">
