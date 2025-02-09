@@ -43,6 +43,45 @@ f.close()
 # -----------------
 #     Classes
 # -----------------
+
+class BiMap:
+    def __init__(self, filename="mapping.json"):
+        self.filename = filename
+        self.string_to_int = {}
+        self.int_to_string = {}
+        self.count = 0
+        self.load()  # Load mappings on startup
+
+    def add(self, key: str):
+        """Adds a new mapping."""
+        if key in self.string_to_int:
+            raise ValueError("Key or value already exists!")
+        self.string_to_int[key] = self.count
+        self.int_to_string[self.count] = key
+        self.count += 1
+
+    def get_int(self, key: str):
+        return self.string_to_int.get(key)
+
+    def get_string(self, value: int):
+        return self.int_to_string.get(value)
+
+    def save(self):
+        """Save mappings to a file."""
+        with open(self.filename, "w") as f:
+            json.dump({"string_to_int": self.string_to_int}, f)
+
+    def load(self):
+        """Load mappings from a file."""
+        try:
+            with open(self.filename, "r") as f:
+                data = json.load(f)
+                self.string_to_int = data.get("string_to_int", {})
+                self.int_to_string = {v: k for k, v in self.string_to_int.items()}
+        except FileNotFoundError:
+            pass  # No file exists yet, start fresh
+
+
 class Database:
     def __init__(self, userFile, nonprofitFile):
         self.userFile = h5py.File(userFile, "a")
@@ -257,6 +296,7 @@ class User:
             self.id = id
             self.tags = UserTagTable(self.id)
             self.vector = compute_query_vectory(self.tags.getCompTags())
+            UserMap.add(id)
         else:
             self.id = id
             self.tags = UserTagTable(self.id, vector=vector) if vector else UserTagTable(self.id)
@@ -454,6 +494,8 @@ OnlineUsers = {
     # userID -> User object
 }
 
+NonprofitMap = BiMap("nonprofitMap.json")
+UserMap = BiMap("userMap.json")
 
 def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
     match n:
@@ -541,7 +583,12 @@ def test():
 def run():
     global database
     database = Database("users.h5", "nonprofits.h5")
+    if os.path.isfile("nonprofitMap.json"):
+        NonprofitMap.load()
+        UserMap.load()
 
 
 def exit():
     database.close()
+    NonprofitMap.save()
+    UserMap.save()
