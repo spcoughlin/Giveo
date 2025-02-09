@@ -355,15 +355,15 @@ class User:
     # --------------------
     #   Scheduling / Next
     # --------------------
-    async def refreshQueue(self):
+    def refreshQueue(self):
         # Get the current user query vector (100-dimensional)
         user_vec = self.getCompTags(self.chooseEvent())
         candidates = []
 
         # Retrieve all nonprofit IDs and vectors from the HDF5 file.
         # (Assumes the nonprofits file has datasets named "nonprofit_ids" and "nonprofit_vectors")
-        np_ids = database.nonprofitFile["nonprofit_ids"][:]       # e.g., an array of type S12 (byte strings)
-        np_vectors = database.nonprofitFile["nonprofit_vectors"][:] # shape (N, 100)
+        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # e.g., an array of type S12 (byte strings)
+        np_vectors = database.nonprofitFile["nonprofit_vectors"][:]  # shape (N, 100)
 
         # Loop through every nonprofit in the file.
         for idx, np_id in enumerate(np_ids):
@@ -377,24 +377,17 @@ class User:
             # Get the nonprofit’s stored vector and compute cosine similarity.
             vec = np_vectors[idx]
             sim = cosine_similarity(user_vec, vec)
-            candidates.append((sim, charity_id, vec))
+            candidates.append((sim, charity_id))
 
         # Sort candidates by similarity (highest first) and take the top 10.
         candidates.sort(key=lambda x: x[0], reverse=True)
         top_ten = candidates[:10]
 
-        # Clear any existing upcoming charities.
-        self.upcomingQueue = deque()
-        self.upcomingSet = set()
-
         # For each selected candidate, re-create the NonProfit object.
         # We “recover” the primary and secondary tag lists by checking which indices in the vector
         # have a value of 10 (primary) or 1 (secondary). This assumes the nonprofit vector was generated
         # using compute_nonprofit_vector.
-        for sim, charity_id, vec in top_ten:
-            primary = np.where(vec == 10)[0].tolist()
-            secondary = np.where(vec == 1)[0].tolist()
-            nonprofit_obj = NonProfit(charity_id, primary, secondary)
+        for sim, charity_id in top_ten:
             self.upcomingQueue.append(charity_id)
             self.upcomingSet.add(charity_id)
 
@@ -409,6 +402,11 @@ class User:
         for _ in range(n):
             sending.append(NP := self.upcomingQueue.popleft())
             self.upcomingSet.remove(NP)
+            self.seenQueue.append(NP)
+            self.seenSet.add(NP)
+            if len(self.seenQueue) > 50:
+                byebye = self.seenQueue.popleft()
+                self.seenSet.remove(byebye)
         return sending
 
     def getFullVector(self):
