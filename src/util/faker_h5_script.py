@@ -4,8 +4,8 @@ create_fake_data.py
 
 This script creates fake backend user and nonprofit records and appends them to HDF5 databases.
 Each database uses the following datasets:
-  - For users: "user_ids" (dtype S12) and "user_vectors" (shape (*, 100), float32)
-  - For nonprofits: "nonprofit_ids" (dtype S12) and "nonprofit_vectors" (shape (*, 100), float32)
+  - For users: "user_ids" (dtype S20) and "user_vectors" (shape (*, 100), float32)
+  - For nonprofits: "nonprofit_ids" (dtype S20) and "nonprofit_vectors" (shape (*, 100), float32)
 
 Usage:
     python create_fake_data.py --num_users 15 --num_nonprofits 12
@@ -42,6 +42,16 @@ VALID_TAGS = [
 ]
 NUM_TAGS = len(VALID_TAGS)  # Should be 100
 
+# --- Firebase-style ID Generation ---
+
+# Firebase push IDs use a set of 64 URL-safe characters.
+FIREBASE_ID_LENGTH = 20
+PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+
+def generate_firebase_id(length=FIREBASE_ID_LENGTH):
+    """Generate a random Firebase-style ID of the given length."""
+    return ''.join(random.choice(PUSH_CHARS) for _ in range(length))
+
 # --- Fake Data Generation Functions ---
 
 def random_user_vector(dim=NUM_TAGS, p_zero=0.1):
@@ -60,7 +70,7 @@ def random_user_vector(dim=NUM_TAGS, p_zero=0.1):
         idx = random.randint(0, dim - 1)
         vector[idx] = random.uniform(0.05, 1)
         norm = np.linalg.norm(vector)
-    return vector
+    return vector / norm
 
 def random_nonprofit_vector(dim=NUM_TAGS):
     """
@@ -79,7 +89,8 @@ def random_nonprofit_vector(dim=NUM_TAGS):
     if norm == 0:
         vector[random.randint(0, dim-1)] = 1.0
         norm = np.linalg.norm(vector)
-    return vector
+    return vector / norm
+
 # --- Database Class ---
 
 class Database:
@@ -91,8 +102,10 @@ class Database:
         self.ensureDatasets(self.nonprofitFile, "nonprofit")
 
     def ensureDatasets(self, file, name):
+        # Update the dataset string length to match FIREBASE_ID_LENGTH.
+        id_dtype = f"S{FIREBASE_ID_LENGTH}"
         if f"{name}_ids" not in file:
-            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype="S12")
+            file.create_dataset(f"{name}_ids", shape=(0,), maxshape=(None,), dtype=id_dtype)
             file.create_dataset(f"{name}_vectors", shape=(0, NUM_TAGS), maxshape=(None, NUM_TAGS), dtype=np.float32)
 
     def addVector(self, file, name, id, vector):
@@ -136,13 +149,15 @@ def main():
 
     # Append user records.
     for i in range(1, args.num_users + 1):
-        user_id = f"u{i:03d}"
+        # Generate a Firebase-style auto-generated ID.
+        user_id = generate_firebase_id()
         vector = random_user_vector()
         db.addUser(user_id, vector)
 
     # Append nonprofit records.
     for i in range(1, args.num_nonprofits + 1):
-        nonprofit_id = f"n{i:03d}"
+        # Generate a Firebase-style auto-generated ID.
+        nonprofit_id = generate_firebase_id()
         vector = random_nonprofit_vector()
         db.addNonprofit(nonprofit_id, vector)
 
