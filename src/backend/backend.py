@@ -2,7 +2,6 @@ import random
 import time
 from collections import deque
 from copy import deepcopy
-import os
 import json
 
 # Third-party packages
@@ -425,6 +424,7 @@ def recover_nonprofit_tags(vector):
             secondary.append(i)
     return primary, secondary
 
+
 def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
     match n:
         case 0:
@@ -437,6 +437,7 @@ def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
             user.donate(nonProfit, amount)
         case _:
             raise Exception("Invalid Reaction")
+
 
 # -----------------
 #   Vector Stuff
@@ -476,22 +477,6 @@ def cosine_similarity(vec1, vec2):
 OnlineUsers = {
     # userID -> User object
 }
-
-NonprofitMap = BiMap("nonprofitMap.json")
-UserMap = BiMap("userMap.json")
-
-def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
-    match n:
-        case 0:
-            user.like(nonProfit)
-        case 1:
-            user.dislike(nonProfit)
-        case 2:
-            user.ignore(nonProfit)
-        case 3:
-            user.donate(nonProfit, amount)
-        case _:
-            raise Exception("Invalid Reaction")
 
 
 # ---------------------
@@ -543,6 +528,7 @@ def logOut(userID: str):
 
 lastUpdate = time.time()
 
+
 @app.get("/queueUpdate")
 def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[int]):
     updateQueue.append(nonprofitID)
@@ -563,7 +549,7 @@ def run():
     database = Database("users.h5", "nonprofits.h5")
     # If any mapping files exist, they can be loaded here if needed.
 
-def exit():
+
+def exitApp():
     database.close()
     # Save any state if needed.
-
