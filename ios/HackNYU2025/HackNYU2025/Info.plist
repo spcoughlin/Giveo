@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SourceSerifPro-Regular.otf</string>
+		<string>SourceSerifPro-Semibold.otf</string>
+		<string>SourceSerifPro-Black.otf</string>
+		<string>SourceSerifPro-Bold.otf</string>
+		<string>SourceSerifPro-ExtraLight.otf</string>
+		<string>SourceSerifPro-Light.otf</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>52.70.58.148</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

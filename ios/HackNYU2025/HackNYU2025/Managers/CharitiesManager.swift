@@ -2,7 +2,7 @@
 //  CharitiesManager.swift
 //  HackNYU2025
 //
-//  Created by Alec Agayan on 2/8/25.
+//  Created by Alec Agayan on 2/9/25
 //
 
 import Foundation
@@ -29,11 +29,11 @@ class CharitiesManager: ObservableObject {
     
     // MARK: - Fetching Charities
     
-    /// Fetch all charities from Firestore.
+    /// Fetch all charities from Firestore and load their additional data (donations, donors, and campaigns) fully before adding to allCharities.
     func fetchCharities(completion: (() -> Void)? = nil) {
         isLoading = true
         errorMessage = nil
-
+        
         db.collection("charities").getDocuments { [weak self] (querySnapshot, error) in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -44,49 +44,175 @@ class CharitiesManager: ObservableObject {
                     completion?()
                     return
                 }
-                guard let documents = querySnapshot?.documents else {
+                guard let documents = querySnapshot?.documents, !documents.isEmpty else {
                     self.isLoading = false
                     self.errorMessage = "No charities found."
                     print(self.errorMessage ?? "")
                     completion?()
                     return
                 }
-                // Decode charities and update list & cache.
-                let fetchedCharities = documents.compactMap { document -> Charity? in
-                    var charity = try? document.data(as: Charity.self)
-                    if var charity = charity {
-                        charity.id = document.documentID // Ensure the ID is set
-                        if let cached = GlobalCache.shared.charityCache[charity.id!] {
-                            // Update if this version has more data.
-                            if charity.hasMoreData(than: cached) {
-                                GlobalCache.shared.charityCache[charity.id!] = charity
-                                return charity
-                            } else {
-                                return cached
-                            }
-                        } else {
-                            GlobalCache.shared.charityCache[charity.id!] = charity
-                            return charity
+                
+                // Use a DispatchGroup to wait for each charity to be fully populated.
+                let group = DispatchGroup()
+                var loadedCharities: [Charity] = []
+                
+                for document in documents {
+                    group.enter()
+                    self.fetchFullyPopulatedCharity(from: document) { charity in
+                        if let charity = charity {
+                            loadedCharities.append(charity)
                         }
+                        group.leave()
                     }
-                    return nil
                 }
                 
-                self.allCharities = fetchedCharities
-                self.isLoading = false
-                
-                // Optionally fetch images for all charities.
-                self.fetchImagesForCharities()
-                
-                // Initialize the swipe deck by filling it with 3 random cards.
-                self.updateDisplayedCharities()
-                
-                completion?()
+                group.notify(queue: .main) {
+                    self.allCharities = loadedCharities
+                    self.isLoading = false
+                    
+                    // Optionally fetch images for all charities.
+                    self.fetchImagesForCharities()
+                    
+                    // Initialize the swipe deck by filling it with up to maxCardsInStack charities.
+                    self.updateDisplayedCharities()
+                    
+                    completion?()
+                }
+            }
+        }
+    }
+    
+    func fetchFullyPopulatedCharity(from document: DocumentSnapshot, completion: @escaping (Charity?) -> Void) {
+        do {
+            var charity = try document.data(as: Charity.self)
+            charity.id = document.documentID
+            
+            // Now load additional data (donations, donors, campaigns) before returning.
+            self.loadAdditionalData(for: charity) {
+                completion(charity)
+            }
+        } catch DecodingError.keyNotFound(let key, let context) {
+            print("Decoding error: Missing key '\(key.stringValue)' in document \(document.documentID). \(context.debugDescription)")
+            completion(nil)
+        } catch DecodingError.typeMismatch(let type, let context) {
+            print("Decoding error: Type mismatch for type '\(type)' in document \(document.documentID). \(context.debugDescription)")
+            completion(nil)
+        } catch DecodingError.valueNotFound(let type, let context) {
+            print("Decoding error: Value not found for type '\(type)' in document \(document.documentID). \(context.debugDescription)")
+            completion(nil)
+        } catch {
+            print("Error decoding charity from document \(document.documentID): \(error.localizedDescription)")
+            completion(nil)
+        }
+    }
+    
+    /// Loads additional data for a charity by converting raw ID arrays into full objects.
+    func loadAdditionalData(for charity: Charity, completion: @escaping () -> Void) {
+        print("running loadAdditionalData")
+        guard let _ = charity.id else {
+            completion()
+            return
+        }
+        
+        let group = DispatchGroup()
+        
+        // --- Fetch Donations ---
+        group.enter()
+        if !charity.donationIDs.isEmpty {
+            db.collection("donations")
+                .whereField(FieldPath.documentID(), in: charity.donationIDs)
+                .getDocuments { snapshot, error in
+                    if let docs = snapshot?.documents {
+                        let donations = docs.compactMap { doc -> Donation? in
+                            var donation = try? doc.data(as: Donation.self)
+                            donation?.id = doc.documentID
+                            return donation
+                        }
+                        charity.donations = donations
+                    } else {
+                        charity.donations = []
+                    }
+                    group.leave()
+                }
+        } else {
+            charity.donations = []
+            group.leave()
+        }
+        
+        // --- Fetch Donors ---
+        group.enter()
+        if !charity.donorIDs.isEmpty {
+            db.collection("users")
+                .whereField(FieldPath.documentID(), in: charity.donorIDs)
+                .getDocuments { snapshot, error in
+                    if let docs = snapshot?.documents {
+                        let donors = docs.compactMap { doc -> User? in
+                            var user = try? doc.data(as: User.self)
+                            user?.id = doc.documentID
+                            return user
+                        }
+                        charity.donors = donors
+                    } else {
+                        charity.donors = []
+                    }
+                    group.leave()
+                }
+        } else {
+            charity.donors = []
+            group.leave()
+        }
+        
+        // --- Fetch Campaigns ---
+        group.enter()
+        if !charity.campaignIDs.isEmpty {
+            db.collection("campaigns")
+                .whereField(FieldPath.documentID(), in: charity.campaignIDs)
+                .getDocuments { snapshot, error in
+                    if let error = error {
+                        print("Error fetching campaigns for charity \(charity.name): \(error.localizedDescription)")
+                    }
+                    let docs = snapshot?.documents ?? []
+                    print("Snapshot returned \(docs.count) documents for charity \(charity.name)")
+                    let campaigns: [Campaign] = docs.compactMap { doc -> Campaign? in
+                        do {
+                            var campaign = try doc.data(as: Campaign.self)
+                            campaign.id = doc.documentID
+                            return campaign
+                        } catch {
+                            print("Decoding error for campaign document \(doc.documentID): \(error)")
+                            return nil
+                        }
+                    }
+                    charity.campaigns = campaigns
+                    print("Loaded campaigns: \(campaigns)")
+                    group.leave()
+                }
+        } else {
+            charity.campaigns = []
+            group.leave()
+        }
+        
+        group.notify(queue: .main) {
+            self.objectWillChange.send()
+            completion()
+        }
+    }
+    
+    func fetchCampaignImage(for campaign: Campaign, completion: @escaping (UIImage?) -> Void) {
+        guard let campaignId = campaign.id else { completion(nil); return }
+        let imageRef = Storage.storage().reference().child("campaign_images/\(campaignId)/image.jpg")
+        imageRef.getData(maxSize: 5 * 1024 * 1024) { data, error in
+            if let data = data, let image = UIImage(data: data) {
+                completion(image)
+            } else {
+                print("Error fetching campaign image for campaign \(campaign.title): \(error?.localizedDescription ?? "Unknown error")")
+                completion(nil)
             }
         }
     }
     
     /// Fetch charities for the specified array of document IDs.
+    /// (Now updated so that each returned charity has its additional data loaded.)
     func fetchCharities(with ids: [String], completion: @escaping ([Charity]) -> Void) {
         guard !ids.isEmpty else {
             completion([])
@@ -106,34 +232,47 @@ class CharitiesManager: ObservableObject {
                         return
                     }
                     
-                    let fetched = querySnapshot?.documents.compactMap { doc -> Charity? in
+                    let charities = querySnapshot?.documents.compactMap { doc -> Charity? in
                         var charity = try? doc.data(as: Charity.self)
                         charity?.id = doc.documentID
-                        if let id = charity?.id {
-                            GlobalCache.shared.charityCache[id] = charity
-                        }
                         return charity
                     } ?? []
                     
-                    completion(fetched)
+                    // Load additional data for each charity before returning
+                    let group = DispatchGroup()
+                    var updatedCharities: [Charity] = []
+                    for charity in charities {
+                        group.enter()
+                        self.loadAdditionalData(for: charity) {
+                            updatedCharities.append(charity)
+                            group.leave()
+                        }
+                    }
+                    group.notify(queue: .main) {
+                        // (Optional) Cache the charities if desired.
+                        for charity in updatedCharities {
+                            if let id = charity.id {
+                                GlobalCache.shared.charityCache[id] = charity
+                            }
+                        }
+                        completion(updatedCharities)
+                    }
                 }
             }
     }
     
-    /// (Common) Fetch images for all charities in the allCharities array.
+    /// Fetch images for all charities in the allCharities array.
     func fetchImagesForCharities() {
         for (index, charity) in self.allCharities.enumerated() {
             guard charity.id != nil else {
                 print("Charity \(charity.name) does not have an ID.")
                 continue
             }
-            // Fetch Hero Image.
             fetchHeroImage(for: charity) { image in
                 DispatchQueue.main.async {
                     self.allCharities[index].heroImage = image
                 }
             }
-            // Fetch Logo Image.
             fetchLogoImage(for: charity) { image in
                 DispatchQueue.main.async {
                     self.allCharities[index].logoImage = image
@@ -205,7 +344,7 @@ class CharitiesManager: ObservableObject {
         
         group.notify(queue: .main) {
             if let id = updatedCharity.id {
-                GlobalCache.shared.charityCache[id] = updatedCharity
+                GlobalCache.shared.imageCache[id] = updatedCharity.heroImage
             }
             completion(updatedCharity)
         }
@@ -214,7 +353,6 @@ class CharitiesManager: ObservableObject {
     func updateDisplayedCharities() {
         print("Updating displayed charities from server...")
         displayedCharities.removeAll()
-        // When refreshing the entire deck, show the loading indicator.
         isLoading = true
         refillDeckIfNeeded()
     }
@@ -222,11 +360,9 @@ class CharitiesManager: ObservableObject {
     private var isProcessingSwipe = false
 
     func removeDisplayedCharity(_ charity: Charity) {
-        // Prevent duplicate removals by checking the flag.
         guard !isProcessingSwipe else { return }
         isProcessingSwipe = true
 
-        // Remove the card if it's the top card (assuming the last element is the top).
         if let topCard = displayedCharities.last, topCard.id == charity.id {
             displayedCharities.removeLast()
             print("Removed top charity: \(charity.name). Deck count: \(displayedCharities.count)")
@@ -237,7 +373,6 @@ class CharitiesManager: ObservableObject {
             print("Charity \(charity.name) not found in displayed deck.")
         }
         
-        // Decide whether to refill the deck.
         if displayedCharities.isEmpty {
             print("Deck is empty—refreshing entire deck.")
             isLoading = true
@@ -246,7 +381,6 @@ class CharitiesManager: ObservableObject {
             refillDeckIfNeeded()
         }
         
-        // Allow subsequent swipes after this one is processed.
         isProcessingSwipe = false
     }
     
@@ -264,69 +398,89 @@ class CharitiesManager: ObservableObject {
         }
     }
     
-    /// Fetches a random charity from the server and adds it to the bottom of the deck.
-    /// Fetches a random charity from the server and adds it to the bottom of the deck.
+    /// Fetches the next charities from the API and adds them to the deck.
+    /// It queries the `/nextN` endpoint using the authenticated user's id and the number of cards needed.
     func getNextCharity(completion: (() -> Void)? = nil) {
-        print("Fetching new charity from server...")
-        db.collection("charities").getDocuments { [weak self] (snapshot, error) in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("Error fetching charity for next card: \(error.localizedDescription)")
-                    completion?()
-                    return
-                }
-                guard let documents = snapshot?.documents, !documents.isEmpty else {
-                    print("No charities available from server.")
-                    completion?()
-                    return
-                }
-                
-                // Filter out charities that are already in the displayed deck.
-                let displayedIds = Set(self.displayedCharities.compactMap { $0.id })
-                let filteredDocuments = documents.filter { !displayedIds.contains($0.documentID) }
-                
-                if filteredDocuments.isEmpty {
-                    print("All charities are already in the deck. No new charity to add.")
-                    completion?()
-                    return
-                }
-                
-                // Pick a random charity from the filtered list.
-                let randomIndex = Int.random(in: 0..<filteredDocuments.count)
-                let randomDoc = filteredDocuments[randomIndex]
-                var charity = try? randomDoc.data(as: Charity.self)
-                charity?.id = randomDoc.documentID
-                guard let charityToAdd = charity else {
-                    print("Error decoding charity from document.")
-                    completion?()
-                    return
-                }
-                
-                self.fetchImages(for: charityToAdd) { updatedCharity in
-                    DispatchQueue.main.async {
-                        if let charity = updatedCharity {
-                            // Insert the new charity at index 0 (i.e. at the bottom of the deck).
-                            self.displayedCharities.insert(charity, at: 0)
-                            print("Added charity: \(charity.name). Deck count is now: \(self.displayedCharities.count)")
-                            
-                            // --- NEW CODE: Print the current queue ---
-                            let queueNames = self.displayedCharities.map { $0.name }
-                            print("Current queue: \(queueNames)")
-                            // --------------------------------------------
-                            
-                            // If the deck is now full, hide the loading indicator.
-                            if self.displayedCharities.count >= self.maxCardsInStack {
-                                self.isLoading = false
-                            }
-                        } else {
-                            print("Error: Failed to fetch images for charity \(charityToAdd.name)")
-                        }
-                        completion?()
-                    }
-                }
-            }
+        print("Fetching new charities from API...")
+        
+        // Ensure an authenticated user is available.
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("User not authenticated; cannot fetch next charities.")
+            completion?()
+            return
         }
+        
+        // Determine how many charities are needed to fill the deck.
+        let countNeeded = maxCardsInStack - displayedCharities.count
+        guard countNeeded > 0 else {
+            completion?()
+            return
+        }
+        
+        // Construct the URL for the `/nextN` endpoint.
+        let apiBaseURL = "http://52.70.58.148" // Replace with your actual API URL
+        guard let url = URL(string: "\(apiBaseURL)/nextN?userID=\(userID)&n=\(countNeeded)") else {
+            print("Invalid nextN URL.")
+            completion?()
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Send the request to the API.
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            // Handle errors from the API call.
+            if let error = error {
+                print("Error calling nextN API: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion?() }
+                return
+            }
+            
+            guard let data = data else {
+                print("No data received from nextN API.")
+                DispatchQueue.main.async { completion?() }
+                return
+            }
+            
+            // Debug: Print the raw JSON data received.
+            print("Data received from nextN API: \(String(data: data, encoding: .utf8) ?? "No data")")
+            
+            // Parse the JSON response.
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let charityIds = json["array"] as? [String] {
+                    
+                    if charityIds.isEmpty {
+                        print("nextN API returned an empty array.")
+                        DispatchQueue.main.async { completion?() }
+                        return
+                    }
+                    
+                    // Fetch the charity documents from Firestore for the returned IDs.
+                    self.fetchCharities(with: charityIds) { charities in
+                        DispatchQueue.main.async {
+                            // Add each charity to the swipe deck if it's not already there.
+                            for charity in charities {
+                                if !self.displayedCharities.contains(where: { $0.id == charity.id }) {
+                                    self.displayedCharities.insert(charity, at: 0)
+                                }
+                            }
+                            print("Added \(charities.count) charities from API to deck.")
+                            completion?()
+                        }
+                    }
+                } else {
+                    print("Invalid JSON format from nextN API.")
+                    DispatchQueue.main.async { completion?() }
+                }
+            } catch {
+                print("Error parsing JSON from nextN API: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion?() }
+            }
+        }.resume()
     }
     
     func updateCharityProfile(charity: Charity,
@@ -334,56 +488,43 @@ class CharitiesManager: ObservableObject {
                               newLocation: String,
                               newHeroImage: UIImage?,
                               newLogoImage: UIImage?,
+                              newPrimaryTags: [String],
+                              newSecondaryTags: [String],
                               completion: @escaping (Bool) -> Void) {
         guard let charityID = charity.id else {
             completion(false)
             return
         }
         
-        // Prepare the fields to update in Firestore.
         var updates: [String: Any] = [
             "description": newDescription,
-            "location": newLocation
+            "location": newLocation,
+            "primaryTags": newPrimaryTags,
+            "secondaryTags": newSecondaryTags
         ]
         
         let group = DispatchGroup()
         
-        // Upload new hero image if provided.
-        if let newHero = newHeroImage,
-           let imageData = newHero.jpegData(compressionQuality: 0.8) {
+        if let newHero = newHeroImage, let imageData = newHero.jpegData(compressionQuality: 0.8) {
             group.enter()
             let heroRef = storage.reference().child("charity_images/\(charityID)/hero.jpg")
             heroRef.putData(imageData, metadata: nil) { metadata, error in
-                if let error = error {
-                    print("Error uploading hero image: \(error.localizedDescription)")
-                    group.leave()
-                    return
-                }
-                // Update the Firestore field to use the fixed file name.
+                if error != nil { group.leave(); return }
                 updates["heroImage"] = "hero.jpg"
-                print("updated hero")
                 group.leave()
             }
         }
         
-        // Upload new logo image if provided.
-        if let newLogo = newLogoImage,
-           let imageData = newLogo.jpegData(compressionQuality: 0.8) {
+        if let newLogo = newLogoImage, let imageData = newLogo.jpegData(compressionQuality: 0.8) {
             group.enter()
             let logoRef = storage.reference().child("charity_images/\(charityID)/logo.jpg")
             logoRef.putData(imageData, metadata: nil) { metadata, error in
-                if let error = error {
-                    print("Error uploading logo image: \(error.localizedDescription)")
-                    group.leave()
-                    return
-                }
+                if error != nil { group.leave(); return }
                 updates["logoImage"] = "logo.jpg"
-                print("updated logo")
                 group.leave()
             }
         }
         
-        // Once all image uploads are complete, update Firestore.
         group.notify(queue: .main) {
             self.db.collection("charities").document(charityID).updateData(updates) { error in
                 if let error = error {
@@ -397,7 +538,87 @@ class CharitiesManager: ObservableObject {
         }
     }
     
-
+    /// Searches for charities based on a query.
+    /// (Now updated so that the returned charities have their additional data loaded.)
+    func searchCharitiesInFirebase(query: String, completion: @escaping ([Charity]) -> Void) {
+        guard !query.isEmpty else {
+            completion([])
+            return
+        }
+        
+        let query1 = query
+        let query2 = query.capitalized
+        
+        let nameQuery1 = db.collection("charities")
+            .whereField("name", isGreaterThanOrEqualTo: query1)
+            .whereField("name", isLessThanOrEqualTo: query1 + "\u{f8ff}")
+        
+        let nameQuery2 = db.collection("charities")
+            .whereField("name", isGreaterThanOrEqualTo: query2)
+            .whereField("name", isLessThanOrEqualTo: query2 + "\u{f8ff}")
+        
+        let tagsQuery = db.collection("charities")
+            .whereField("primaryTags", arrayContains: query.lowercased())
+        
+        let group = DispatchGroup()
+        var resultsSet = [String: Charity]()
+        
+        let processSnapshot: (QuerySnapshot?) -> Void = { snapshot in
+            if let docs = snapshot?.documents {
+                for doc in docs {
+                    var charity = try? doc.data(as: Charity.self)
+                    charity?.id = doc.documentID
+                    if let charity = charity, let id = charity.id {
+                        resultsSet[id] = charity
+                    }
+                }
+            }
+        }
+        
+        group.enter()
+        nameQuery1.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error in nameQuery1: \(error.localizedDescription)")
+            }
+            processSnapshot(snapshot)
+            group.leave()
+        }
+        
+        group.enter()
+        nameQuery2.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error in nameQuery2: \(error.localizedDescription)")
+            }
+            processSnapshot(snapshot)
+            group.leave()
+        }
+        
+        group.enter()
+        tagsQuery.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error in tagsQuery: \(error.localizedDescription)")
+            }
+            processSnapshot(snapshot)
+            group.leave()
+        }
+        
+        group.notify(queue: .main) {
+            let charities = Array(resultsSet.values)
+            let loadGroup = DispatchGroup()
+            var updatedCharities: [Charity] = []
+            for charity in charities {
+                loadGroup.enter()
+                self.loadAdditionalData(for: charity) {
+                    updatedCharities.append(charity)
+                    loadGroup.leave()
+                }
+            }
+            loadGroup.notify(queue: .main) {
+                completion(updatedCharities)
+            }
+        }
+    }
+    
     /// Resets all local caches and state.
     func reset() {
         allCharities.removeAll()
