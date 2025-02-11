@@ -1,126 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giveo - Swipe. Give. Repeat.</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" href="logo_red.png" type="image/png">
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener("click", function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute("href").substring(1);
-                    const targetElement = document.getElementById(targetId);
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.offsetTop,
-                            behavior: "smooth"
-                        });
-                    }
-                });
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giveo - Swipe. Give. Repeat.</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="logo_red.png" type="image/png">
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute("href").substring(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            window.scrollTo({
+              top: targetElement.offsetTop,
+              behavior: "smooth"
             });
+          }
         });
-    </script>
-    <style>
-        :root {
-            --primary-color: #FE3437;
-            --secondary-color: #F7F2ED;
-            --block-color: #4E342E;
-            --background-color: #FFFFFB;
-            --text-color: #3B3333;
-        }
-    </style>
+      });
+    });
+  </script>
+  <style>
+    :root {
+      --primary-color: #FE3437;
+      --secondary-color: #F7F2ED;
+      --block-color: #4E342E;
+      --background-color: #FFFFFB;
+      --text-color: #3B3333;
+    }
+  </style>
 </head>
 <body class="bg-[var(--background-color)] text-[var(--text-color)]">
-    <header class="bg-[var(--secondary-color)] shadow-md p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center">
-                <img src="logo_red.png" alt="Giveo Logo" class="h-10 mr-2">
-                <h1 class="text-2xl font-bold text-[var(--primary-color)]">Giveo</h1>
-            </div>
-            <button class="md:hidden text-[var(--text-color)]" id="nav-toggle">☰</button>
-            <nav class="hidden md:flex space-x-4" id="nav-menu">
-                <a href="#how-it-works" class="text-[var(--text-color)] px-4">How It Works</a>
-                <a href="#get-started" class="text-[var(--text-color)] px-4">Get Started</a>
-                <a href="#about" class="text-[var(--text-color)] px-4">About</a>
-            </nav>
-        </div>
-        <div class="md:hidden hidden flex flex-col bg-[var(--secondary-color)] p-4 space-y-2" id="mobile-menu">
-            <a href="#how-it-works" class="text-[var(--text-color)] py-2 block">How It Works</a>
-            <a href="#get-started" class="text-[var(--text-color)] py-2 block">Get Started</a>
-            <a href="#about" class="text-[var(--text-color)] py-2 block">About</a>
-        </div>
-    </header>
-    
-    <script>
-        document.getElementById('nav-toggle').addEventListener('click', function() {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
-    </script>
-    
-    <section class="text-center py-20 bg-[var(--block-color)] text-[var(--background-color)]">
-        <blockquote class="italic text-lg">“Success isn’t about how much money you make. It’s about the difference you make in people’s lives.”<br>— Michelle Obama</blockquote>
-        <h2 class="text-4xl font-extrabold mt-6">Swipe. Give. Repeat.</h2>
-        <p class="mt-4 text-lg">Discover charities based on your passions and make giving a habit, not an obligation.</p>
-        <div class="mt-6">
-            <a href="#get-started" class="bg-[var(--background-color)] text-[var(--primary-color)] px-6 py-3 rounded-lg font-bold text-lg">Get Started</a>
-        </div>
-    </section>
-    
-    <section id="how-it-works" class="py-16 container mx-auto px-6 text-center">
-        <h3 class="text-3xl font-bold">How It Works</h3>
-        <p class="mt-4 text-[var(--text-color)]">Swipe through charities. Save what you love. Give when you're ready.</p>
-        <div class="mt-8 grid md:grid-cols-3 gap-6">
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Swipe</h4>
-                <p class="text-[var(--text-color)]">Swipe right to like, left to pass, down to save, and up to donate.</p>
-            </div>
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Discover</h4>
-                <p class="text-[var(--text-color)]">Our AI recommends charities based on your interests.</p>
-            </div>
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Give Back</h4>
-                <p class="text-[var(--text-color)]">Make giving a daily habit with smaller, stress-free donations.</p>
-            </div>
-        </div>
-    </section>
-    
-    <section id="get-started" class="bg-[var(--block-color)] text-[var(--background-color)] py-16 text-center">
-        <h3 class="text-3xl font-bold">Start Giving Today</h3>
-        <p class="mt-4">Join Giveo and make giving back part of your lifestyle.</p>
-        <div class="mt-6">
-            <a href="#" class="bg-[var(--background-color)] text-[var(--primary-color)] px-6 py-3 rounded-lg font-bold text-lg">Sign Up</a>
-        </div>
-    </section>
-    
-    <section id="about" class="py-16 container mx-auto px-6 text-center">
-        <h3 class="text-3xl font-bold">About Us</h3>
-        <img src="group_image.jpg" alt="About Us" class="mx-auto mt-6 w-full max-w-4xl rounded-lg shadow-lg">
-        <div class="mt-8 grid md:grid-cols-4 gap-6">
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Quinn Savitt</h4>
-                <p class="text-[var(--text-color)]"></p>
-            </div>
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Sean Coughlin</h4>
-                <p class="text-[var(--text-color)]"></p>
-            </div>
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Alec Agayan</h4>
-                <p class="text-[var(--text-color)]"></p>
-            </div>
-            <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
-                <h4 class="font-bold text-xl">Tal Ledeniov</h4>
-                <p class="text-[var(--text-color)]"></p>
-            </div>
-        </div>
-    </section>
-    
-    <footer class="text-center py-6 text-[var(--text-color)] bg-[var(--secondary-color)]">
-        &copy; 2025 Giveo. All rights reserved.
-    </footer>
+  <header class="bg-[var(--secondary-color)] shadow-md p-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="logo_red.png" alt="Giveo Logo" class="h-10 mr-2">
+        <h1 class="text-2xl font-bold text-[var(--primary-color)]">Giveo</h1>
+      </div>
+      <button class="md:hidden text-[var(--text-color)]" id="nav-toggle">☰</button>
+      <nav class="hidden md:flex space-x-4" id="nav-menu">
+        <a href="#how-it-works" class="text-[var(--text-color)] px-4">How It Works</a>
+        <a href="#get-started" class="text-[var(--text-color)] px-4">Get Started</a>
+        <a href="#about" class="text-[var(--text-color)] px-4">About</a>
+      </nav>
+    </div>
+    <div class="md:hidden hidden flex flex-col bg-[var(--secondary-color)] p-4 space-y-2" id="mobile-menu">
+      <a href="#how-it-works" class="text-[var(--text-color)] py-2 block">How It Works</a>
+      <a href="#get-started" class="text-[var(--text-color)] py-2 block">Get Started</a>
+      <a href="#about" class="text-[var(--text-color)] py-2 block">About</a>
+    </div>
+  </header>
+
+  <script>
+    document.getElementById('nav-toggle').addEventListener('click', function() {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+  </script>
+
+  <section class="text-center py-20 bg-[var(--block-color)] text-[var(--background-color)]">
+    <blockquote class="italic text-lg">
+      “Success isn’t about how much money you make. It’s about the difference you make in people’s lives.”
+      <br>— Michelle Obama
+    </blockquote>
+    <h2 class="text-4xl font-extrabold mt-6">Swipe. Give. Repeat.</h2>
+    <p class="mt-4 text-lg">Discover charities based on your passions and make giving a habit, not an obligation.</p>
+    <div class="mt-6">
+      <a href="#get-started" class="bg-[var(--background-color)] text-[var(--primary-color)] px-6 py-3 rounded-lg font-bold text-lg">Get Started</a>
+    </div>
+  </section>
+
+  <!-- Updated How It Works Section with YouTube Embed and "Demo" header -->
+  <section id="how-it-works" class="py-16 container mx-auto px-6 text-center">
+    <h2 class="text-4xl font-extrabold mb-6">Demo</h2>
+    <div class="mx-auto" style="max-width: 560px;">
+      <iframe
+        width="560"
+        height="315"
+        src="https://www.youtube.com/watch?v=KTbUzU5nbEg"
+        title="YouTube video player"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        class="w-full">
+      </iframe>
+    </div>
+  </section>
+
+  <section id="get-started" class="bg-[var(--block-color)] text-[var(--background-color)] py-16 text-center">
+    <h3 class="text-3xl font-bold">Start Giving Today</h3>
+    <p class="mt-4">Join Giveo and make giving back part of your lifestyle.</p>
+    <div class="mt-6">
+      <a href="#" class="bg-[var(--background-color)] text-[var(--primary-color)] px-6 py-3 rounded-lg font-bold text-lg">Sign Up</a>
+    </div>
+  </section>
+
+  <section id="about" class="py-16 container mx-auto px-6 text-center">
+    <h3 class="text-3xl font-bold">About Us</h3>
+    <img src="group_image.jpg" alt="About Us" class="mx-auto mt-6 w-full max-w-4xl rounded-lg shadow-lg">
+    <div class="mt-8 grid md:grid-cols-4 gap-6">
+      <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
+        <h4 class="font-bold text-xl">Quinn Savitt</h4>
+        <p class="text-[var(--text-color)]"></p>
+      </div>
+      <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
+        <h4 class="font-bold text-xl">Sean Coughlin</h4>
+        <p class="text-[var(--text-color)]"></p>
+      </div>
+      <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
+        <h4 class="font-bold text-xl">Alec Agayan</h4>
+        <p class="text-[var(--text-color)]"></p>
+      </div>
+      <div class="p-6 bg-[var(--secondary-color)] shadow-md rounded-lg">
+        <h4 class="font-bold text-xl">Tal Ledeniov</h4>
+        <p class="text-[var(--text-color)]"></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-center py-6 text-[var(--text-color)] bg-[var(--secondary-color)]">
+    &copy; 2025 Giveo. All rights reserved.
+  </footer>
 </body>
 </html>
+
