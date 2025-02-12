@@ -3,8 +3,10 @@ from collections import deque
 from copy import deepcopy
 import numpy as np
 import json
+import os
 
-with open("data/tags.json", "r") as f:
+json_path = os.path.join(os.path.dirname(__file__), "..", "data", "tags.json")
+with open(json_path, "r") as f:
     Tags = json.load(f)
 
 class UserTagTable:

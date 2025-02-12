@@ -169,3 +169,11 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# ---------
+# CUSTOM
+# ---------
+
+.DS_Store
+src/backend/data/data.db

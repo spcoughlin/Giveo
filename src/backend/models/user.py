@@ -1,10 +1,13 @@
+# models/user.py
 from collections import deque
 import random
+import os
 from models.usertagtable import UserTagTable
-from models.database import Database
+from models.sqlite_db import SQLiteDatabase
 from helpers import compute_query_vectory, cosine_similarity
 
-database: Database = Database("data/users.h5", "data/nonprofits.h5")
+db_path = os.path.join(os.path.dirname(__file__), "..", "data", "data.db")
+database = SQLiteDatabase(db_path)
 
 class User:
     def __init__(self, id_val, vector=None, new=False):
@@ -80,23 +83,19 @@ class User:
         user_query = self.getCompTags(self.chooseEvent())
         user_vec = compute_query_vectory(user_query)
         candidates = []
-        np_ids = database.nonprofitFile["nonprofit_ids"][:]  # stored as byte strings
-        np_vectors = database.nonprofitFile["nonprofit_vectors"][:]  # shape (N, 100)
-        for idx, np_id in enumerate(np_ids):
-            charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
+        # Instead of reading HDF5 arrays, retrieve all nonprofits from the SQLite DB.
+        all_nonprofits = database.get_all_nonprofits()  # List of (nonprofit_id, vector)
+        for charity_id, vec in all_nonprofits:
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
                 continue
-            vec = np_vectors[idx]
             sim = cosine_similarity(user_vec, vec)
             candidates.append((sim, charity_id))
         if not candidates:
             self.seenSet.clear()
             self.seenQueue.clear()
-            for idx, np_id in enumerate(np_ids):
-                charity_id = np_id.decode("utf-8") if isinstance(np_id, bytes) else np_id
+            for charity_id, vec in all_nonprofits:
                 if charity_id in self.upcomingSet:
                     continue
-                vec = np_vectors[idx]
                 sim = cosine_similarity(user_vec, vec)
                 candidates.append((sim, charity_id))
         candidates.sort(key=lambda x: x[0], reverse=True)
@@ -124,5 +123,4 @@ class User:
 
     def getFullVector(self):
         return self.tags.getFullVector()
-
 

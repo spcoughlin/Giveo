@@ -1,5 +1,4 @@
 import numpy as np
-from models.user import User
 from models.nonprofit import NonProfit
 
 # -----------------
@@ -47,7 +46,7 @@ def cosine_similarity(vec1, vec2):
 # -----------------
 #   Reaction Function
 # -----------------
-def react(n: int, user: User, nonProfit: NonProfit, amount=0.0):
+def react(n: int, user, nonProfit: NonProfit, amount=0.0):
     match n:
         case 0:
             user.like(nonProfit)

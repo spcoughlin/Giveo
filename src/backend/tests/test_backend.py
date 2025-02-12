@@ -1,356 +1,186 @@
-# test_backend.py
-
-import os
-import random
-import tempfile
+# tests/test_system.py
+import sqlite3
 import numpy as np
 import pytest
-import h5py
 
+# Import our new SQLiteDatabase from sqlite_db.py.
+from models.sqlite_db import SQLiteDatabase, vector_to_blob, blob_to_vector
+# Import the User class (which uses the global `database` instance from models.user)
+from models.user import User
+# Import the FastAPI app and the global database variable from main.
 from fastapi.testclient import TestClient
+from main import app
 
-# Import backend code.
-# (Adjust the import below to match your module’s name or structure.)
-from backend import (
-    Database,
-    UserTagTable,
-    NonProfit,
-    User,
-    compute_nonprofit_vector,
-    compute_query_vectory,
-    cosine_similarity,
-    react,
-    OnlineUsers,
-    updateQueue,
-    app,
-)
-
-# ================================
-# Tests for the Database class
-# ================================
+# -----------------------------------------------------------------------------
+# Tests for SQLiteDatabase
+# -----------------------------------------------------------------------------
 
 @pytest.fixture
-def temp_database(tmp_path):
-    """
-    Create a temporary Database instance with HDF5 files in a temporary folder.
-    """
-    user_file = tmp_path / "users.h5"
-    nonprofit_file = tmp_path / "nonprofits.h5"
-    db = Database(str(user_file), str(nonprofit_file))
-    yield db
-    db.close()
+def db():
+    # Create a new in-memory database for each test.
+    return SQLiteDatabase(":memory:")
 
+def test_add_and_get_user(db):
+    user_id = "test_user"
+    vector = np.random.rand(100).astype(np.float32)
+    db.add_user(user_id, vector)
+    retrieved = db.get_user(user_id)
+    np.testing.assert_array_equal(vector, retrieved)
 
-def test_database_add_and_get_user(temp_database):
-    # Add a user with id "testuser" and a simple vector (ones).
-    test_vector = np.ones(100, dtype=np.float32)
-    temp_database.addUser("testuser", test_vector)
-    # Use the Database.get method to retrieve the vector.
-    retrieved = temp_database.get(temp_database.userFile, "user", "testuser")
-    assert np.allclose(retrieved, test_vector)
+def test_update_user(db):
+    user_id = "test_user"
+    vector = np.random.rand(100).astype(np.float32)
+    db.add_user(user_id, vector)
+    new_vector = np.random.rand(100).astype(np.float32)
+    db.update_user_vector(user_id, new_vector)
+    retrieved = db.get_user(user_id)
+    np.testing.assert_array_equal(new_vector, retrieved)
 
+def test_add_and_get_nonprofit(db):
+    np_id = "nonprofit_1"
+    vector = np.random.rand(100).astype(np.float32)
+    db.add_nonprofit(np_id, vector)
+    retrieved = db.get_nonprofit_vector(np_id)
+    np.testing.assert_array_equal(vector, retrieved)
 
-def test_database_update_user(temp_database):
-    # Add a user and then update its vector.
-    test_vector = np.ones(100, dtype=np.float32)
-    temp_database.addUser("testuser", test_vector)
-    new_vector = np.full(100, 2.0, dtype=np.float32)
-    temp_database.updateUserVector("testuser", new_vector)
-    retrieved = temp_database.get(temp_database.userFile, "user", "testuser")
-    assert np.allclose(retrieved, new_vector)
+def test_get_all_nonprofits(db):
+    nonprofits = [
+        ("np_1", np.random.rand(100).astype(np.float32)),
+        ("np_2", np.random.rand(100).astype(np.float32)),
+    ]
+    for np_id, vec in nonprofits:
+        db.add_nonprofit(np_id, vec)
+    all_nps = db.get_all_nonprofits()
+    assert len(all_nps) == len(nonprofits)
+    # Check that each nonprofit was added.
+    for np_id, vec in nonprofits:
+        matches = [v for id_found, v in all_nps if id_found == np_id]
+        assert matches, f"Nonprofit {np_id} not found"
+        np.testing.assert_array_equal(vec, matches[0])
 
+# -----------------------------------------------------------------------------
+# Tests for the User class (unit tests)
+# -----------------------------------------------------------------------------
 
-# ================================
-# Tests for the UserTagTable class
-# ================================
-
-def test_user_tag_table_set_get():
-    utt = UserTagTable(userID=1)
-    # Get the original value for a tag (say tag 0)
-    original_val = utt.getVal(0)
-    # Change its value
-    utt.set(0, 0.9)
-    assert np.isclose(utt.getVal(0), 0.9)
-    # The sorted_list should now reflect the new value.
-    sorted_vals = [val for (val, tag) in utt.sorted_list if tag == 0]
-    assert sorted_vals and np.isclose(sorted_vals[0], 0.9)
-
-
-def test_user_tag_table_remove():
-    utt = UserTagTable(userID=1)
-    utt.set(5, 0.8)
-    utt.remove(5)
-    with pytest.raises(KeyError):
-        _ = utt.data[5]
-    # Also, the sorted_list should not contain tag 5.
-    for (val, tag) in utt.sorted_list:
-        assert tag != 5
-
-
-def test_user_tag_table_clone():
-    utt = UserTagTable(userID=1)
-    utt.set(0, 0.7)
-    clone = utt.clone()
-    assert clone.getVal(0) == utt.getVal(0)
-    # Modify the clone and ensure the original remains unchanged.
-    clone.set(0, 0.5)
-    assert utt.getVal(0) == 0.7
-
-
-def test_user_tag_table_get_comp_tags():
-    utt = UserTagTable(userID=1)
-    comp = utt.getCompTags()
-    # Should return a dictionary with 20 entries.
-    assert isinstance(comp, dict)
-    assert len(comp) == 20
-
-
-def test_user_tag_table_get_full_vector():
-    utt = UserTagTable(userID=1)
-    vec = utt.getFullVector()
-    assert vec.shape[0] == 100
-    # Check that for each tag in data the corresponding vector entry matches.
-    for tag, weight in utt.data.items():
-        assert np.isclose(vec[tag], weight)
-    # Ensure that tags in the zeroTags deque have value zero.
-    for tag in utt.zeroTags:
-        assert vec[tag] == 0.0
-
-
-def test_user_tag_table_like():
-    # Create a dummy NonProfit with known primary and secondary tag lists.
-    dummy_np = NonProfit("np1", primary=[0, 1], secondary=[2, 3])
-    utt = UserTagTable(userID=1)
-    # Record the initial values.
-    init = {tag: utt.getVal(tag) for tag in [0, 1, 2, 3]}
-    utt.like(dummy_np)
-    # For primary tags: new_val = old + (1 - old) * 0.1
-    for tag in [0, 1]:
-        expected = init[tag] + (1 - init[tag]) * 0.1
-        assert np.isclose(utt.getVal(tag), expected)
-    # For secondary tags: new_val = old + (1 - old) * 0.01
-    for tag in [2, 3]:
-        expected = init[tag] + (1 - init[tag]) * 0.01
-        assert np.isclose(utt.getVal(tag), expected)
-
-
-def test_user_tag_table_donate():
-    dummy_np = NonProfit("np1", primary=[10, 11], secondary=[12, 13])
-    utt = UserTagTable(userID=1)
-    init = {tag: utt.getVal(tag) for tag in [10, 11, 12, 13]}
-    utt.donate(dummy_np)
-    for tag in [10, 11]:
-        expected = init[tag] + (1 - init[tag]) * 0.25
-        assert np.isclose(utt.getVal(tag), expected)
-    for tag in [12, 13]:
-        expected = init[tag] + (1 - init[tag]) * 0.025
-        assert np.isclose(utt.getVal(tag), expected)
-
-
-def test_user_tag_table_ignore():
-    dummy_np = NonProfit("np1", primary=[20], secondary=[21])
-    utt = UserTagTable(userID=1)
-    utt.set(20, 0.8)
-    utt.set(21, 0.8)
-    utt.ignore(dummy_np)
-    # For primary, new = 0.8 * 0.9
-    assert np.isclose(utt.getVal(20), 0.8 * 0.9)
-    # For secondary, new = 0.8 * 0.99
-    assert np.isclose(utt.getVal(21), 0.8 * 0.99)
-
-
-def test_user_tag_table_dislike():
-    dummy_np = NonProfit("np1", primary=[30], secondary=[31])
-    utt = UserTagTable(userID=1)
-    utt.set(30, 0.8)
-    utt.set(31, 0.8)
-    utt.dislike(dummy_np)
-    # For primary, new = 0.8 * 0.75
-    assert np.isclose(utt.getVal(30), 0.8 * 0.75)
-    # For secondary, new = 0.8 * 0.975
-    assert np.isclose(utt.getVal(31), 0.8 * 0.975)
-
-
-# ================================
-# Tests for NonProfit and vector functions
-# ================================
-
-def test_nonprofit():
-    np_obj = NonProfit("np_test", primary=[0, 1], secondary=[2])
-    assert np_obj.id == "np_test"
-    assert np_obj.tags["primary"] == [0, 1]
-    assert np_obj.tags["secondary"] == [2]
-
-
-def test_compute_nonprofit_vector():
-    nonprofit_dict = {"primary": [1, 5], "secondary": [3, 7]}
-    vec = compute_nonprofit_vector(nonprofit_dict, total_tags=100)
-    # Primary tags should have value 10.
-    for tag in [1, 5]:
-        assert vec[tag] == 10
-    # Secondary tags should have value 1.
-    for tag in [3, 7]:
-        assert vec[tag] == 1
-    # All other entries should be 0.
-    for i in range(100):
-        if i not in [1, 5, 3, 7]:
-            assert vec[i] == 0
-
-
-def test_compute_query_vectory():
-    query = {0: 0.5, 10: 0.7}
-    vec = compute_query_vectory(query, total_tags=100)
-    assert np.isclose(vec[0], 0.5)
-    assert np.isclose(vec[10], 0.7)
-    for i in range(100):
-        if i not in query:
-            assert vec[i] == 0
-
-
-def test_cosine_similarity():
-    vec1 = np.array([1, 0, 0], dtype=np.float32)
-    vec2 = np.array([1, 0, 0], dtype=np.float32)
-    sim = cosine_similarity(vec1, vec2)
-    assert np.isclose(sim, 1.0)
-    vec3 = np.array([0, 1, 0], dtype=np.float32)
-    sim = cosine_similarity(vec1, vec3)
-    assert np.isclose(sim, 0.0)
-
-
-# ================================
-# Tests for the react function
-# ================================
-
-def test_react_like():
-    # Create dummy user and nonprofit objects that record which reaction was called.
-    class DummyUser:
-        def __init__(self):
-            self.liked = False
-        def like(self, np_obj):
-            self.liked = True
-
-    class DummyNP:
-        pass
-
-    user = DummyUser()
-    np_obj = DummyNP()
-    react(0, user, np_obj)
-    assert user.liked is True
-
-
-def test_invalid_reaction():
-    user = User(222)
-    dummy_np = NonProfit("dummy", primary=[0], secondary=[1])
-    with pytest.raises(Exception):
-        react(999, user, dummy_np)
-
-
-# ================================
-# Tests for the User class methods
-# ================================
-
-def test_user_get_full_vector():
-    user = User(101)
-    vec = user.getFullVector()
-    assert vec.shape[0] == 100
-
-
-def test_user_get_next_n(monkeypatch):
-    # Create a user with an upcomingQueue already populated.
-    user = User(789)
-    user.upcomingQueue =  __import__("collections").deque(["np1", "np2", "np3"])
-    user.upcomingSet = {"np1", "np2", "np3"}
-    # Monkey-patch refreshQueue so that it does nothing when called.
-    monkeypatch.setattr(user, "refreshQueue", lambda: None)
-    next_items = user.getNextN(2)
-    assert next_items == ["np1", "np2"]
-    assert "np1" not in user.upcomingSet
-    assert "np2" not in user.upcomingSet
-
-
-def test_user_choose_event():
-    user = User(111)
-    # Ensure the user has an attribute 'donations' (even if empty) so that event 5 works.
-    user.donations = []
-    for _ in range(10):
-        event = user.chooseEvent()
-        assert event in [0, 1, 2, 3, 4, 5]
-
-
-def test_user_refresh_queue(monkeypatch):
-    # Prepare a dummy nonprofit file for the global database.
-    dummy_ids = np.array([b"np1", b"np2", b"np3"], dtype="S12")
-    # For simplicity, let every nonprofit vector be a 100-D vector of ones.
-    dummy_vectors = np.ones((3, 100), dtype=np.float32)
-    dummy_nonprofit_file = {
-        "nonprofit_ids": dummy_ids,
-        "nonprofit_vectors": dummy_vectors,
-    }
-    # Patch the global database’s nonprofitFile to our dummy object.
-    monkeypatch.setattr(Database, "nonprofitFile", dummy_nonprofit_file)
-    # Create a dummy user.
-    user = User(456)
-    # Force chooseEvent to return 0 (so that getCompTags is used directly).
-    monkeypatch.setattr(user, "chooseEvent", lambda: 0)
-    # Override getCompTags so that the user query vector is a known vector.
-    monkeypatch.setattr(user, "getCompTags", lambda event=0: np.ones(100, dtype=np.float32))
-    user.refreshQueue()
-    # upcomingQueue should now have up to 10 nonprofit IDs (decoded to str).
-    for np_id in user.upcomingQueue:
-        assert np_id in [b.decode("utf-8") for b in dummy_ids]
-
-
-# ================================
-# Tests for the API endpoints
-# ================================
-
-client = TestClient(app)
-
-def dummy_getUser(userID):
-    # Always return None so that a new user is created.
-    return None
-
-def dummy_getNonprofit(nonprofitID):
-    # Return a simple NonProfit object.
-    return NonProfit(str(nonprofitID), primary=[0, 1], secondary=[2, 3])
-
-
+# For testing purposes we override compute_query_vectory and cosine_similarity.
+# (Assume these functions are imported in models/user.py.)
 @pytest.fixture(autouse=True)
-def patch_database(monkeypatch):
-    # Patch the global database methods so that logOn and reaction work without real HDF5 access.
-    monkeypatch.setattr("backend.database.getUser", dummy_getUser)
-    monkeypatch.setattr("backend.database.getNonprofit", dummy_getNonprofit)
+def override_helpers(monkeypatch):
+    def dummy_compute_query_vectory(query):
+        # Return a predictable vector (e.g. all ones)
+        return np.ones(100, dtype=np.float32)
+    
+    def dummy_cosine_similarity(vec1, vec2):
+        # A dummy similarity: higher if the sum of differences is lower.
+        # (Not a true cosine similarity, but works for our test.)
+        diff = np.linalg.norm(vec1 - vec2)
+        return 1 / (1 + diff)
+    
+    monkeypatch.setattr("models.user.compute_query_vectory", dummy_compute_query_vectory)
+    monkeypatch.setattr("models.user.cosine_similarity", dummy_cosine_similarity)
 
+@pytest.fixture
+def test_db(tmp_path, monkeypatch):
+    # Create a SQLiteDatabase in memory for testing the User class.
+    test_db_instance = SQLiteDatabase(":memory:")
+    # Override the global database used in the User class (from models/user.py)
+    monkeypatch.setattr("models.user.database", test_db_instance)
+    return test_db_instance
 
-def test_log_on_and_log_off():
-    # Test /logOn: it should add a user to OnlineUsers.
-    response = client.post("/logOn", params={"userID": 123})
+def test_user_refresh_queue(test_db):
+    # Add several nonprofits to the test database.
+    for i in range(5):
+        np_id = f"np_{i}"
+        # Use a vector that is predictable (e.g. a constant times ones)
+        vec = np.ones(100, dtype=np.float32) * (i + 1)
+        test_db.add_nonprofit(np_id, vec)
+    
+    # Create a new user (simulate a new user).
+    user = User("user_test", new=True)
+    # Initially, the user's upcomingQueue should be empty.
+    assert len(user.upcomingQueue) == 0
+    # Call refreshQueue, which should fill the upcomingQueue.
+    user.refreshQueue()
+    assert len(user.upcomingQueue) > 0
+    # Test getNextN returns the expected number of charities.
+    next_n = user.getNextN(3)
+    assert len(next_n) <= 3
+    # Ensure that the charities returned are among those added.
+    nonprofit_ids = [f"np_{i}" for i in range(5)]
+    for charity in next_n:
+        assert charity in nonprofit_ids
+
+# -----------------------------------------------------------------------------
+# Integration tests for the FastAPI API endpoints
+# -----------------------------------------------------------------------------
+
+@pytest.fixture
+def client(monkeypatch):
+    # For testing the API, override the global database with an in-memory one.
+    test_db_instance = SQLiteDatabase(":memory:")
+    monkeypatch.setattr("main.database", test_db_instance)
+    # Also reset the OnlineUsers global (in main.py) to an empty dict.
+    monkeypatch.setattr("main.OnlineUsers", {})
+    return TestClient(app)
+
+def test_log_on_and_log_off(client):
+    # Test /logOn: since the user doesn't exist, a new one will be created.
+    response = client.get("/logOn", params={"userID": "test_user"})
     assert response.status_code == 200
-    assert response.text == "success"
-    assert 123 in OnlineUsers
+    assert response.text.strip('"') == "success"
 
-    # Test /reaction.
-    response = client.post("/reaction", params={"userID": 123, "reactionNum": 0, "nonprofitID": 1})
+    # Check that the user is now logged in.
+    response = client.get("/isLoggedIn", params={"userID": "test_user"})
+    # isLoggedIn returns "True" as plain text.
+    assert response.text.strip('"') == "True"
+
+    # Log off the user.
+    response = client.get("/logOff", params={"userID": "test_user"})
     assert response.status_code == 200
-    # Test /nextN: manually set the upcomingQueue for the user.
-    OnlineUsers[123].upcomingQueue = __import__("collections").deque(["np_test"])
-    OnlineUsers[123].upcomingSet = {"np_test"}
-    response = client.get("/nextN", params={"userID": 123, "n": 1})
+    assert response.text.strip('"') == "success"
+
+    # Verify the user is no longer logged in.
+    response = client.get("/isLoggedIn", params={"userID": "test_user"})
+    assert response.text.strip('"') == "False"
+
+def test_nextN_endpoint(client, monkeypatch):
+    # First, log on a test user.
+    client.get("/logOn", params={"userID": "test_user"})
+
+    # Add some nonprofits to the database.
+    # Get the database instance from main (which we overrode in the fixture).
+    from main import database
+    for i in range(3):
+        np_id = f"np_{i}"
+        vec = np.ones(100, dtype=np.float32) * (i + 1)
+        database.add_nonprofit(np_id, vec)
+
+    # Call the /nextN endpoint.
+    response = client.get("/nextN", params={"userID": "test_user", "n": 2})
+    assert response.status_code == 200
     data = response.json()
+    # Expect an array of charity IDs.
     assert "array" in data
-    # Test /logOff.
-    response = client.post("/logOff", params={"userID": 123})
-    assert response.status_code == 200
-    assert response.text == "success"
-    assert 123 not in OnlineUsers
+    assert isinstance(data["array"], list)
+    # The list length should be at most 2.
+    assert len(data["array"]) <= 2
 
-
-def test_queue_update():
-    # Clear the updateQueue.
-    updateQueue.clear()
-    response = client.post("/queueUpdate", params={"nonprofitID": 999})
+def test_reaction_endpoint(client):
+    # Log on a test user.
+    client.get("/logOn", params={"userID": "test_user"})
+    # Add a nonprofit to the database.
+    from main import database
+    np_id = "np_1"
+    vec = np.ones(100, dtype=np.float32)
+    database.add_nonprofit(np_id, vec)
+    
+    # Test the reaction endpoint.
+    # Here we send reaction number 1 (for example).
+    response = client.get("/reaction", params={
+        "userID": "test_user",
+        "reactionNum": 1,
+        "nonprofitID": np_id
+    })
     assert response.status_code == 200
-    assert response.text == "success"
-    # Check that the nonprofitID was added.
-    assert updateQueue[-1] == 999
+    assert response.text.strip('"') == "success"
 

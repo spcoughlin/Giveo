@@ -1,13 +1,15 @@
+# main.py (or your API entrypoint)
 import time
 from collections import deque
 import json
+import os
 
 # Third-party packages
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 
 from models.user import User
-from models.database import Database
+from models.sqlite_db import SQLiteDatabase
 from helpers import react
 
 # -----------------
@@ -25,10 +27,14 @@ Events = {
     5: "repeat"
 }
 
-with open("data/tags.json", "r") as f:
+json_path = os.path.join(os.path.dirname(__file__), "data", "tags.json") 
+with open(json_path, "r") as f:
     Tags = json.load(f)
 
 OnlineUsers = {}
+
+# Instantiate the global database using SQLite
+database = SQLiteDatabase("data.db")
 
 # ---------------------
 #   API Endpoints
@@ -46,7 +52,8 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
     if reactionNum > 3 or reactionNum < 0:
         return PlainTextResponse("FAIL: Invalid reaction number")
     user = OnlineUsers[userID]
-    nonprofit = database.getNonprofit(nonprofitID)
+    # Use the new get_nonprofit method from SQLiteDatabase
+    nonprofit = database.get_nonprofit(nonprofitID)
     if nonprofit is None:
         return PlainTextResponse("FAIL: Nonprofit not found")
     if reactionNum == 3:
@@ -57,7 +64,7 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
 
 @app.get("/logOn")
 def logOn(userID: str):
-    vector = database.getUser(userID)
+    vector = database.get_user(userID)
     if vector is not None:
         user = User(userID, vector=vector)
     else:
@@ -69,7 +76,15 @@ def logOn(userID: str):
 def logOut(userID: str):
     if userID not in OnlineUsers:
         return PlainTextResponse("FAIL: User not online")
-    database.updateUserVector(userID, OnlineUsers[userID].getFullVector())
+    user = OnlineUsers[userID]
+    new_vector = user.getFullVector()
+    # Check if the user already exists in the database.
+    if database.get_user(userID) is None:
+        # If not, add the user.
+        database.add_user(userID, new_vector)
+    else:
+        # Otherwise, update the user's vector.
+        database.update_user_vector(userID, new_vector)
     del OnlineUsers[userID]
     return PlainTextResponse("success")
 
@@ -88,7 +103,7 @@ def test():
     return {"message": "Hello World"}
 
 @app.get("/isLoggedIn")
-def isLoggedIn(userID):
+def isLoggedIn(userID: str):
     return PlainTextResponse("True" if userID in OnlineUsers else "False")
 
 # -----------------
@@ -96,7 +111,7 @@ def isLoggedIn(userID):
 # -----------------
 def run():
     global database
-    database = Database("data/users.h5", "data/nonprofits.h5")
+    database = SQLiteDatabase("data.db")
 
 def exit():
     database.close()
