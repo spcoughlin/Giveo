@@ -11,6 +11,9 @@ from models.user import User
 from fastapi.testclient import TestClient
 from main import app
 
+import os
+os.environ["DATABASE_PATH"] = ":memory:"
+
 # -----------------------------------------------------------------------------
 # Tests for SQLiteDatabase
 # -----------------------------------------------------------------------------

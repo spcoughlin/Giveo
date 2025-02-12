@@ -1,13 +1,14 @@
 # models/user.py
+import os
 from collections import deque
 import random
-import os
 from models.usertagtable import UserTagTable
 from models.sqlite_db import SQLiteDatabase
 from helpers import compute_query_vectory, cosine_similarity
+from config import DATABASE_PATH   # import the central configuration
 
-db_path = os.path.join(os.path.dirname(__file__), "..", "data", "data.db")
-database = SQLiteDatabase(db_path)
+# Create the global database using the configured path.
+database = SQLiteDatabase(DATABASE_PATH)
 
 class User:
     def __init__(self, id_val, vector=None, new=False):
@@ -70,7 +71,7 @@ class User:
         self.tags.like(nonprofit)
 
     def donate(self, nonprofit, amount):
-        self.tags.donate(nonprofit)
+        self.tags.donate(nonprofit, amount)
 
     def ignore(self, nonprofit):
         self.tags.ignore(nonprofit)
@@ -83,7 +84,7 @@ class User:
         user_query = self.getCompTags(self.chooseEvent())
         user_vec = compute_query_vectory(user_query)
         candidates = []
-        # Instead of reading HDF5 arrays, retrieve all nonprofits from the SQLite DB.
+        # Retrieve all nonprofits from the SQLite DB.
         all_nonprofits = database.get_all_nonprofits()  # List of (nonprofit_id, vector)
         for charity_id, vec in all_nonprofits:
             if charity_id in self.seenSet or charity_id in self.upcomingSet:
