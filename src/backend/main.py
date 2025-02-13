@@ -10,6 +10,7 @@ from fastapi.responses import PlainTextResponse
 
 from models.user import User
 from models.sqlite_db import SQLiteDatabase
+from models.coin-ledger import CoinLedger
 from helpers import react
 
 # -----------------
