@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse
 
 from models.user import User
 from models.sqlite_db import SQLiteDatabase
-from models.coin-ledger import CoinLedger
+from models.coinledger import CoinLedger
 from helpers import react
 
 # -----------------
@@ -67,6 +67,17 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
         react(reactionNum, user, nonprofit)
     return PlainTextResponse("success")
 
+@app.get("/addLedger")
+def addLedger(userID: str, amount: int, nonprofitID: str):
+    ledger = CoinLedger("data/data.db")
+    tx_id = ledger.add(userID, amount, nonprofitID)
+    return {"tx_id": tx_id}
+
+@app.get("/removeLedger")
+def removeLedger(tx_id: str):
+    ledger = CoinLedger("data/data.db")
+    ledger.remove(tx_id)
+    return PlainTextResponse("success")
 
 def logOn(userID: str):
     vector = database.get_user(userID)
