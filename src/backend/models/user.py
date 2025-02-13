@@ -1,14 +1,18 @@
 # models/user.py
 import os
+import sys
 from collections import deque
 import random
-from models.usertagtable import UserTagTable
-from models.sqlite_db import SQLiteDatabase
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from usertagtable import UserTagTable
+from sqlite_db import SQLiteDatabase
 from helpers import compute_query_vectory, cosine_similarity
-from config import DATABASE_PATH   # import the central configuration
+from config import DATABASE_PATH  # import the central configuration
 
 # Create the global database using the configured path.
 database = SQLiteDatabase(DATABASE_PATH)
+
 
 class User:
     def __init__(self, id_val, vector=None, new=False):
@@ -124,4 +128,3 @@ class User:
 
     def getFullVector(self):
         return self.tags.getFullVector()
-
