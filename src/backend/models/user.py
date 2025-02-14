@@ -5,8 +5,8 @@ from collections import deque
 import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from usertagtable import UserTagTable
-from sqlite_db import SQLiteDatabase
+from models.usertagtable import UserTagTable
+from models.sqlite_db import SQLiteDatabase
 from helpers import compute_query_vectory, cosine_similarity
 from config import DATABASE_PATH  # import the central configuration
 
