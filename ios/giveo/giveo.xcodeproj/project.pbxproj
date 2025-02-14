@@ -32,38 +32,25 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		70F390DB2D396F08007DE4C0 /* swipeapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = swipeapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = swipeappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = swipeappUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F390DB2D396F08007DE4C0 /* giveo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = giveo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F390EB2D396F09007DE4C0 /* giveoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = giveoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F390F52D396F09007DE4C0 /* giveoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = giveoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		701819B22D3B571D00555000 /* Exceptions for "swipeapp" folder in "swipeapp" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		70F390DD2D396F08007DE4C0 /* swipeapp */ = {
+		70F390DD2D396F08007DE4C0 /* giveo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				701819B22D3B571D00555000 /* Exceptions for "swipeapp" folder in "swipeapp" target */,
-			);
-			path = swipeapp;
+			path = giveo;
 			sourceTree = "<group>";
 		};
-		70F390EE2D396F09007DE4C0 /* swipeappTests */ = {
+		70F390EE2D396F09007DE4C0 /* giveoTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = swipeappTests;
+			path = giveoTests;
 			sourceTree = "<group>";
 		};
-		70F390F82D396F09007DE4C0 /* swipeappUITests */ = {
+		70F390F82D396F09007DE4C0 /* giveoUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = swipeappUITests;
+			path = giveoUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -108,9 +95,9 @@
 		70F390D22D396F07007DE4C0 = {
 			isa = PBXGroup;
 			children = (
-				70F390DD2D396F08007DE4C0 /* swipeapp */,
-				70F390EE2D396F09007DE4C0 /* swipeappTests */,
-				70F390F82D396F09007DE4C0 /* swipeappUITests */,
+				70F390DD2D396F08007DE4C0 /* giveo */,
+				70F390EE2D396F09007DE4C0 /* giveoTests */,
+				70F390F82D396F09007DE4C0 /* giveoUITests */,
 				70E9541D2D3AEB1700395B5A /* Frameworks */,
 				70F390DC2D396F08007DE4C0 /* Products */,
 			);
@@ -119,9 +106,9 @@
 		70F390DC2D396F08007DE4C0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				70F390DB2D396F08007DE4C0 /* swipeapp.app */,
-				70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */,
-				70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */,
+				70F390DB2D396F08007DE4C0 /* giveo.app */,
+				70F390EB2D396F09007DE4C0 /* giveoTests.xctest */,
+				70F390F52D396F09007DE4C0 /* giveoUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -129,9 +116,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		70F390DA2D396F08007DE4C0 /* swipeapp */ = {
+		70F390DA2D396F08007DE4C0 /* giveo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeapp" */;
+			buildConfigurationList = 70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveo" */;
 			buildPhases = (
 				70F390D72D396F08007DE4C0 /* Sources */,
 				70F390D82D396F08007DE4C0 /* Frameworks */,
@@ -142,9 +129,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				70F390DD2D396F08007DE4C0 /* swipeapp */,
+				70F390DD2D396F08007DE4C0 /* giveo */,
 			);
-			name = swipeapp;
+			name = giveo;
 			packageProductDependencies = (
 				70E9541E2D3AEB1700395B5A /* FirebaseAnalytics */,
 				70E954202D3AEB2400395B5A /* FirebaseAuth */,
@@ -153,12 +140,12 @@
 				701819922D3B52A000555000 /* FirebaseStorage */,
 			);
 			productName = swipeapp;
-			productReference = 70F390DB2D396F08007DE4C0 /* swipeapp.app */;
+			productReference = 70F390DB2D396F08007DE4C0 /* giveo.app */;
 			productType = "com.apple.product-type.application";
 		};
-		70F390EA2D396F09007DE4C0 /* swipeappTests */ = {
+		70F390EA2D396F09007DE4C0 /* giveoTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappTests" */;
+			buildConfigurationList = 70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveoTests" */;
 			buildPhases = (
 				70F390E72D396F09007DE4C0 /* Sources */,
 				70F390E82D396F09007DE4C0 /* Frameworks */,
@@ -170,18 +157,18 @@
 				70F390ED2D396F09007DE4C0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				70F390EE2D396F09007DE4C0 /* swipeappTests */,
+				70F390EE2D396F09007DE4C0 /* giveoTests */,
 			);
-			name = swipeappTests;
+			name = giveoTests;
 			packageProductDependencies = (
 			);
 			productName = swipeappTests;
-			productReference = 70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */;
+			productReference = 70F390EB2D396F09007DE4C0 /* giveoTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		70F390F42D396F09007DE4C0 /* swipeappUITests */ = {
+		70F390F42D396F09007DE4C0 /* giveoUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappUITests" */;
+			buildConfigurationList = 70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveoUITests" */;
 			buildPhases = (
 				70F390F12D396F09007DE4C0 /* Sources */,
 				70F390F22D396F09007DE4C0 /* Frameworks */,
@@ -193,13 +180,13 @@
 				70F390F72D396F09007DE4C0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				70F390F82D396F09007DE4C0 /* swipeappUITests */,
+				70F390F82D396F09007DE4C0 /* giveoUITests */,
 			);
-			name = swipeappUITests;
+			name = giveoUITests;
 			packageProductDependencies = (
 			);
 			productName = swipeappUITests;
-			productReference = 70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */;
+			productReference = 70F390F52D396F09007DE4C0 /* giveoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -225,7 +212,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "swipeapp" */;
+			buildConfigurationList = 70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "giveo" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -243,9 +230,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				70F390DA2D396F08007DE4C0 /* swipeapp */,
-				70F390EA2D396F09007DE4C0 /* swipeappTests */,
-				70F390F42D396F09007DE4C0 /* swipeappUITests */,
+				70F390DA2D396F08007DE4C0 /* giveo */,
+				70F390EA2D396F09007DE4C0 /* giveoTests */,
+				70F390F42D396F09007DE4C0 /* giveoUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -301,12 +288,12 @@
 /* Begin PBXTargetDependency section */
 		70F390ED2D396F09007DE4C0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
+			target = 70F390DA2D396F08007DE4C0 /* giveo */;
 			targetProxy = 70F390EC2D396F09007DE4C0 /* PBXContainerItemProxy */;
 		};
 		70F390F72D396F09007DE4C0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
+			target = 70F390DA2D396F08007DE4C0 /* giveo */;
 			targetProxy = 70F390F62D396F09007DE4C0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -508,7 +495,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swipeapp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swipeapp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/giveo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/giveo";
 			};
 			name = Debug;
 		};
@@ -527,7 +514,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swipeapp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swipeapp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/giveo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/giveo";
 			};
 			name = Release;
 		};
@@ -568,7 +555,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "swipeapp" */ = {
+		70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "giveo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				70F390FD2D396F09007DE4C0 /* Debug */,
@@ -577,7 +564,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeapp" */ = {
+		70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				70F391002D396F09007DE4C0 /* Debug */,
@@ -586,7 +573,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappTests" */ = {
+		70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveoTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				70F391032D396F09007DE4C0 /* Debug */,
@@ -595,7 +582,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappUITests" */ = {
+		70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "giveoUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				70F391062D396F09007DE4C0 /* Debug */,
