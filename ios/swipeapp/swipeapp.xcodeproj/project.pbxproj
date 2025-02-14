@@ -1,0 +1,657 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7018198F2D3B4F5400555000 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7018198E2D3B4F5400555000 /* SDWebImageSwiftUI */; };
+		701819932D3B52A000555000 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 701819922D3B52A000555000 /* FirebaseStorage */; };
+		70E9541F2D3AEB1700395B5A /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 70E9541E2D3AEB1700395B5A /* FirebaseAnalytics */; };
+		70E954212D3AEB2400395B5A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 70E954202D3AEB2400395B5A /* FirebaseAuth */; };
+		70E9542D2D3AF18600395B5A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 70E9542C2D3AF18600395B5A /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		70F390EC2D396F09007DE4C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 70F390D32D396F07007DE4C0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 70F390DA2D396F08007DE4C0;
+			remoteInfo = swipeapp;
+		};
+		70F390F62D396F09007DE4C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 70F390D32D396F07007DE4C0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 70F390DA2D396F08007DE4C0;
+			remoteInfo = swipeapp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		70F390DB2D396F08007DE4C0 /* swipeapp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = swipeapp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = swipeappTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = swipeappUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		701819B22D3B571D00555000 /* Exceptions for "swipeapp" folder in "swipeapp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		70F390DD2D396F08007DE4C0 /* swipeapp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				701819B22D3B571D00555000 /* Exceptions for "swipeapp" folder in "swipeapp" target */,
+			);
+			path = swipeapp;
+			sourceTree = "<group>";
+		};
+		70F390EE2D396F09007DE4C0 /* swipeappTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = swipeappTests;
+			sourceTree = "<group>";
+		};
+		70F390F82D396F09007DE4C0 /* swipeappUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = swipeappUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		70F390D82D396F08007DE4C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7018198F2D3B4F5400555000 /* SDWebImageSwiftUI in Frameworks */,
+				70E9541F2D3AEB1700395B5A /* FirebaseAnalytics in Frameworks */,
+				70E954212D3AEB2400395B5A /* FirebaseAuth in Frameworks */,
+				701819932D3B52A000555000 /* FirebaseStorage in Frameworks */,
+				70E9542D2D3AF18600395B5A /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390E82D396F09007DE4C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390F22D396F09007DE4C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		70E9541D2D3AEB1700395B5A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		70F390D22D396F07007DE4C0 = {
+			isa = PBXGroup;
+			children = (
+				70F390DD2D396F08007DE4C0 /* swipeapp */,
+				70F390EE2D396F09007DE4C0 /* swipeappTests */,
+				70F390F82D396F09007DE4C0 /* swipeappUITests */,
+				70E9541D2D3AEB1700395B5A /* Frameworks */,
+				70F390DC2D396F08007DE4C0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		70F390DC2D396F08007DE4C0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				70F390DB2D396F08007DE4C0 /* swipeapp.app */,
+				70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */,
+				70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		70F390DA2D396F08007DE4C0 /* swipeapp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeapp" */;
+			buildPhases = (
+				70F390D72D396F08007DE4C0 /* Sources */,
+				70F390D82D396F08007DE4C0 /* Frameworks */,
+				70F390D92D396F08007DE4C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				70F390DD2D396F08007DE4C0 /* swipeapp */,
+			);
+			name = swipeapp;
+			packageProductDependencies = (
+				70E9541E2D3AEB1700395B5A /* FirebaseAnalytics */,
+				70E954202D3AEB2400395B5A /* FirebaseAuth */,
+				70E9542C2D3AF18600395B5A /* FirebaseFirestore */,
+				7018198E2D3B4F5400555000 /* SDWebImageSwiftUI */,
+				701819922D3B52A000555000 /* FirebaseStorage */,
+			);
+			productName = swipeapp;
+			productReference = 70F390DB2D396F08007DE4C0 /* swipeapp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		70F390EA2D396F09007DE4C0 /* swipeappTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappTests" */;
+			buildPhases = (
+				70F390E72D396F09007DE4C0 /* Sources */,
+				70F390E82D396F09007DE4C0 /* Frameworks */,
+				70F390E92D396F09007DE4C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70F390ED2D396F09007DE4C0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				70F390EE2D396F09007DE4C0 /* swipeappTests */,
+			);
+			name = swipeappTests;
+			packageProductDependencies = (
+			);
+			productName = swipeappTests;
+			productReference = 70F390EB2D396F09007DE4C0 /* swipeappTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		70F390F42D396F09007DE4C0 /* swipeappUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappUITests" */;
+			buildPhases = (
+				70F390F12D396F09007DE4C0 /* Sources */,
+				70F390F22D396F09007DE4C0 /* Frameworks */,
+				70F390F32D396F09007DE4C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70F390F72D396F09007DE4C0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				70F390F82D396F09007DE4C0 /* swipeappUITests */,
+			);
+			name = swipeappUITests;
+			packageProductDependencies = (
+			);
+			productName = swipeappUITests;
+			productReference = 70F390F52D396F09007DE4C0 /* swipeappUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		70F390D32D396F07007DE4C0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					70F390DA2D396F08007DE4C0 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					70F390EA2D396F09007DE4C0 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 70F390DA2D396F08007DE4C0;
+					};
+					70F390F42D396F09007DE4C0 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 70F390DA2D396F08007DE4C0;
+					};
+				};
+			};
+			buildConfigurationList = 70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "swipeapp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 70F390D22D396F07007DE4C0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				7018198D2D3B4F3F00555000 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 70F390DC2D396F08007DE4C0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				70F390DA2D396F08007DE4C0 /* swipeapp */,
+				70F390EA2D396F09007DE4C0 /* swipeappTests */,
+				70F390F42D396F09007DE4C0 /* swipeappUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		70F390D92D396F08007DE4C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390E92D396F09007DE4C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390F32D396F09007DE4C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		70F390D72D396F08007DE4C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390E72D396F09007DE4C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F390F12D396F09007DE4C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		70F390ED2D396F09007DE4C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
+			targetProxy = 70F390EC2D396F09007DE4C0 /* PBXContainerItemProxy */;
+		};
+		70F390F72D396F09007DE4C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 70F390DA2D396F08007DE4C0 /* swipeapp */;
+			targetProxy = 70F390F62D396F09007DE4C0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		70F390FD2D396F09007DE4C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		70F390FE2D396F09007DE4C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		70F391002D396F09007DE4C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"swipeapp/Preview Content\"";
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = swipeapp/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		70F391012D396F09007DE4C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"swipeapp/Preview Content\"";
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = swipeapp/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		70F391032D396F09007DE4C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeappTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swipeapp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swipeapp";
+			};
+			name = Debug;
+		};
+		70F391042D396F09007DE4C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeappTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swipeapp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swipeapp";
+			};
+			name = Release;
+		};
+		70F391062D396F09007DE4C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeappUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = swipeapp;
+			};
+			name = Debug;
+		};
+		70F391072D396F09007DE4C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alecagayan.swipeappUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = swipeapp;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		70F390D62D396F07007DE4C0 /* Build configuration list for PBXProject "swipeapp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70F390FD2D396F09007DE4C0 /* Debug */,
+				70F390FE2D396F09007DE4C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70F390FF2D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeapp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70F391002D396F09007DE4C0 /* Debug */,
+				70F391012D396F09007DE4C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70F391022D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70F391032D396F09007DE4C0 /* Debug */,
+				70F391042D396F09007DE4C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70F391052D396F09007DE4C0 /* Build configuration list for PBXNativeTarget "swipeappUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70F391062D396F09007DE4C0 /* Debug */,
+				70F391072D396F09007DE4C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7018198D2D3B4F3F00555000 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.3;
+			};
+		};
+		70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7018198E2D3B4F5400555000 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7018198D2D3B4F3F00555000 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
+		701819922D3B52A000555000 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		70E9541E2D3AEB1700395B5A /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		70E954202D3AEB2400395B5A /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		70E9542C2D3AF18600395B5A /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70E9541C2D3AEB0100395B5A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 70F390D32D396F07007DE4C0 /* Project object */;
+}
