@@ -13,6 +13,8 @@ from models.sqlite_db import SQLiteDatabase
 from models.coinledger import CoinLedger
 from helpers import react
 
+from config import DB_GET_PASSWORD, DATABASE_PATH
+
 # -----------------
 #    Global Data
 # -----------------
@@ -35,7 +37,7 @@ with open(json_path, "r") as f:
     Tags = json.load(f)
 
 # Instantiate the global database using SQLite
-database = SQLiteDatabase("data.db")
+database = SQLiteDatabase(DATABASE_PATH)
 
 
 # ---------------------
@@ -69,13 +71,13 @@ def reaction(userID: str, reactionNum: int, nonprofitID: str, amount: float = 0.
 
 @app.get("/addLedger")
 def addLedger(userID: str, amount: int, nonprofitID: str):
-    ledger = CoinLedger("data/data.db")
+    ledger = CoinLedger(DATABASE_PATH)
     tx_id = ledger.add(userID, amount, nonprofitID)
     return {"tx_id": tx_id}
 
 @app.get("/removeLedger")
 def removeLedger(tx_id: str):
-    ledger = CoinLedger("data/data.db")
+    ledger = CoinLedger(DATABASE_PATH)
     ledger.remove(tx_id)
     return PlainTextResponse("success")
 
@@ -123,6 +125,13 @@ def queueUpdate(nonprofitID: str, primaryTags: list[int], secondaryTags: list[in
         pass
     return PlainTextResponse("success")
 
+# Gets the entire database
+@app.get("/getDatabase")
+def getDatabase(password: str):
+    if password != DB_GET_PASSWORD:
+        return PlainTextResponse("FAIL: Incorrect password")
+    return database.get_json()
+
 
 @app.get("/test")
 def test():
@@ -134,7 +143,7 @@ def test():
 # -----------------
 def run():
     global database
-    database = SQLiteDatabase("data.db")
+    database = SQLiteDatabase(DATABASE_PATH)
 
 
 def exitApp():

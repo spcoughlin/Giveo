@@ -20,7 +20,7 @@ class AuthViewModel: ObservableObject {
     private let db = Firestore.firestore()
     
     // Set your API base URL (adjust as needed)
-    private let apiBaseURL = "http://52.70.58.148" // Replace with your API base URL
+    private let apiBaseURL = "https://api.giveo.today" // Replace with your API base URL
 
     init() {
         // Listen to authentication state changes.

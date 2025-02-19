@@ -293,7 +293,7 @@ extension SwipeView {
             return
         }
         
-        let apiBaseURL = "http://52.70.58.148"  // Replace with your actual API base URL.
+        let apiBaseURL = "https://api.giveo.today"  // Replace with your actual API base URL.
         let urlString = "\(apiBaseURL)/reaction?userID=\(userID)&reactionNum=\(reactionNum)&nonprofitID=\(charityID)&amount=\(amount)"
         
         guard let url = URL(string: urlString) else {
@@ -317,3 +317,5 @@ extension SwipeView {
         }.resume()
     }
 }
+
+

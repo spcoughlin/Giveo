@@ -37,9 +37,22 @@
 		70F390F52D396F09007DE4C0 /* giveoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = giveoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD2092C62D60319000808AEE /* Exceptions for "giveo" folder in "giveo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 70F390DA2D396F08007DE4C0 /* giveo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		70F390DD2D396F08007DE4C0 /* giveo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD2092C62D60319000808AEE /* Exceptions for "giveo" folder in "giveo" target */,
+			);
 			path = giveo;
 			sourceTree = "<group>";
 		};
@@ -425,11 +438,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"swipeapp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"giveo/Preview Content\"";
 				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = swipeapp/Info.plist;
+				INFOPLIST_FILE = giveo/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -456,11 +469,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"swipeapp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"giveo/Preview Content\"";
 				DEVELOPMENT_TEAM = N92ZZ9Q2HJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = swipeapp/Info.plist;
+				INFOPLIST_FILE = giveo/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

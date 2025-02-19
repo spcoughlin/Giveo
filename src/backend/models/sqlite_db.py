@@ -1,6 +1,6 @@
-# sqlite_db.py
 import sqlite3
 import numpy as np
+import json
 from models.nonprofit import NonProfit  # your NonProfit class
 from helpers import recover_nonprofit_tags  # helper that recovers primary/secondary tags
 
@@ -20,16 +20,29 @@ class SQLiteDatabase:
 
     def ensure_tables(self):
         c = self.conn.cursor()
+        # Create the users table (using a BLOB for the vector)
         c.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 vector BLOB
             )
         ''')
+        # Create the nonprofits table with id, primary_tags, and secondary_tags stored as JSON text
         c.execute('''
             CREATE TABLE IF NOT EXISTS nonprofits (
                 id TEXT PRIMARY KEY,
-                vector BLOB
+                primary_tags TEXT,
+                secondary_tags TEXT
+            )
+        ''')
+        # Create the coin_ledger table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS coin_ledger (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                userID TEXT,
+                amount REAL,
+                nonprofitID TEXT
             )
         ''')
         self.conn.commit()
@@ -69,38 +82,89 @@ class SQLiteDatabase:
     def get_user(self, id_val: str) -> np.ndarray:
         return self.get_vector("users", id_val)
 
-    # Nonprofit convenience methods
-    def add_nonprofit(self, id_val: str, vector: np.ndarray):
-        self.add_vector("nonprofits", id_val, vector)
+    # Nonprofit convenience methods (using JSON for tag lists)
+    def add_nonprofit(self, id_val: str, primary_tags: list, secondary_tags: list):
+        primary_json = json.dumps(primary_tags)
+        secondary_json = json.dumps(secondary_tags)
+        c = self.conn.cursor()
+        try:
+            c.execute("INSERT INTO nonprofits (id, primary_tags, secondary_tags) VALUES (?, ?, ?)",
+                      (id_val, primary_json, secondary_json))
+        except sqlite3.IntegrityError:
+            raise ValueError(f"ID {id_val} already exists in table nonprofits")
+        self.conn.commit()
 
-    def update_nonprofit_vector(self, id_val: str, new_vector: np.ndarray):
-        self.update_vector("nonprofits", id_val, new_vector)
+    def update_nonprofit_tags(self, id_val: str, primary_tags: list, secondary_tags: list):
+        primary_json = json.dumps(primary_tags)
+        secondary_json = json.dumps(secondary_tags)
+        c = self.conn.cursor()
+        c.execute("UPDATE nonprofits SET primary_tags=?, secondary_tags=? WHERE id=?",
+                  (primary_json, secondary_json, id_val))
+        if c.rowcount == 0:
+            raise ValueError(f"ID {id_val} not found in table nonprofits")
+        self.conn.commit()
 
-    def get_nonprofit_vector(self, id_val: str) -> np.ndarray:
-        return self.get_vector("nonprofits", id_val)
-    
     def get_nonprofit(self, id_val: str):
-        """
-        Retrieve the nonprofit vector, recover its tags, and return a NonProfit object.
-        """
-        vector = self.get_nonprofit_vector(id_val)
-        if vector is None:
+        c = self.conn.cursor()
+        c.execute("SELECT primary_tags, secondary_tags FROM nonprofits WHERE id=?", (id_val,))
+        row = c.fetchone()
+        if row is None:
             return None
-        primary, secondary = recover_nonprofit_tags(vector)
+        primary = json.loads(row[0])
+        secondary = json.loads(row[1])
         return NonProfit(id_val, primary, secondary)
 
     def get_all_nonprofits(self):
-        """
-        Return a list of tuples (nonprofit_id, vector) for all nonprofits.
-        """
         c = self.conn.cursor()
-        c.execute("SELECT id, vector FROM nonprofits")
+        c.execute("SELECT id, primary_tags, secondary_tags FROM nonprofits")
         results = []
         for row in c.fetchall():
             nonprofit_id = row[0]
-            vector = blob_to_vector(row[1])
-            results.append((nonprofit_id, vector))
+            primary_tags = json.loads(row[1])
+            secondary_tags = json.loads(row[2])
+            results.append((nonprofit_id, primary_tags, secondary_tags))
         return results
+
+    def get_json(self):
+        """
+        Return a JSON representation of the database,
+        containing the users, nonprofits, and coin_ledger tables.
+        """
+        c = self.conn.cursor()
+        # Build users dictionary: id -> vector list
+        c.execute("SELECT * FROM users")
+        users = {}
+        for row in c.fetchall():
+            user_id = row[0]
+            vector_blob = row[1]
+            vector_list = blob_to_vector(vector_blob).tolist() if vector_blob else None
+            users[user_id] = vector_list
+
+        # Build nonprofits dictionary: id -> {primary_tags, secondary_tags}
+        c.execute("SELECT * FROM nonprofits")
+        nonprofits = {}
+        for row in c.fetchall():
+            nonprofit_id = row[0]
+            primary_tags = json.loads(row[1])
+            secondary_tags = json.loads(row[2])
+            nonprofits[nonprofit_id] = {
+                "primary_tags": primary_tags,
+                "secondary_tags": secondary_tags
+            }
+
+        # Build coin_ledger dictionary: id -> {timestamp, userID, amount, nonprofitID}
+        c.execute("SELECT * FROM coin_ledger")
+        coin_ledger = {}
+        for row in c.fetchall():
+            coin_id = row[0]
+            coin_ledger[coin_id] = {
+                "timestamp": row[1],
+                "userID": row[2],
+                "amount": row[3],
+                "nonprofitID": row[4]
+            }
+
+        return {"users": users, "nonprofits": nonprofits, "coin_ledger": coin_ledger}
 
     def close(self):
         self.conn.close()

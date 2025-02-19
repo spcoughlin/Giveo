@@ -418,7 +418,7 @@ class CharitiesManager: ObservableObject {
         }
         
         // Construct the URL for the `/nextN` endpoint.
-        let apiBaseURL = "http://52.70.58.148" // Replace with your actual API URL
+        let apiBaseURL = "https://api.giveo.today" // Replace with your actual API URL
         guard let url = URL(string: "\(apiBaseURL)/nextN?userID=\(userID)&n=\(countNeeded)") else {
             print("Invalid nextN URL.")
             completion?()
